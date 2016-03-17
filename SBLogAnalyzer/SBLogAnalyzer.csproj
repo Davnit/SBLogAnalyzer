@@ -43,6 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\EventType.cs" />
+    <Compile Include="Data\JoinLeaveMessage.cs" />
+    <Compile Include="Data\LogMessage.cs" />
+    <Compile Include="Data\TaggedMessage.cs" />
+    <Compile Include="Data\UserTalkMessage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
