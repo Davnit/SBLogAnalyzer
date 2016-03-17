@@ -105,10 +105,10 @@ namespace SBLogAnalyzer.Data
 
         public static bool TryParse(LogMessage msg, out UserTalkMessage message)
         {
-            mmessage = null;
+            message = null;
             try
             {
-                message = Parse(line);
+                message = Parse(msg);
                 return true;
             }
             catch
