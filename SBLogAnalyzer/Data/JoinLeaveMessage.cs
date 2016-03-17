@@ -12,6 +12,8 @@ namespace SBLogAnalyzer.Data
         public const string JoinMessageText = "has joined the channel";
         public const string LeaveMessageText = "has left the channel";
 
+        #region Constructors
+
         public JoinLeaveMessage()
         {
             Username = String.Empty;
@@ -23,6 +25,10 @@ namespace SBLogAnalyzer.Data
             Timestamp = msg.Timestamp;
             Content = msg.Content;
         }
+
+        #endregion
+
+        #region Properties
 
         public string Username
         {
@@ -36,14 +42,23 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        #endregion
+
         public override string ToString()
         {
             return String.Concat(Timestamp, WordSeparator, EventMessagePrefix, WordSeparator, Content);
         }
 
+        #region Static Methods
+
         public static new JoinLeaveMessage Parse(string line)
         {
-            JoinLeaveMessage msg = new JoinLeaveMessage(LogMessage.Parse(line));
+            return Parse(LogMessage.Parse(line));
+        }
+
+        public static JoinLeaveMessage Parse(LogMessage message)
+        {
+            JoinLeaveMessage msg = new JoinLeaveMessage(message);
             if (msg.Content.StartsWith(EventMessagePrefix))
             {
                 string[] parts = msg.Content.Split(WordSeparator);
@@ -80,5 +95,21 @@ namespace SBLogAnalyzer.Data
                 return false;
             }
         }
+
+        public static bool TryParse(LogMessage msg, out JoinLeaveMessage message)
+        {
+            message = null;
+            try
+            {
+                message = Parse(msg);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
     }
 }

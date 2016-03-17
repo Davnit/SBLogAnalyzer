@@ -11,6 +11,8 @@ namespace SBLogAnalyzer.Data
         public const string TagStart = "[";
         public const string TagEnd = "]";
 
+        #region Constructors
+
         public TaggedMessage()
         {
             Tag = String.Empty;
@@ -21,6 +23,10 @@ namespace SBLogAnalyzer.Data
             Timestamp = msg.Timestamp;
             Content = msg.Content;
         }
+
+        #endregion
+
+        #region Properties
 
         public string Tag
         {
@@ -34,14 +40,23 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        #endregion
+
         public override string ToString()
         {
             return String.Concat(Timestamp, WordSeparator, TagStart, Tag, TagEnd, WordSeparator, Content);
         }
 
+        #region Static Methods
+
         public static new TaggedMessage Parse(string line)
         {
-            TaggedMessage msg = new TaggedMessage(LogMessage.Parse(line));
+            return Parse(LogMessage.Parse(line));
+        }
+
+        public static TaggedMessage Parse(LogMessage message)
+        {
+            TaggedMessage msg = new TaggedMessage(message);
             string[] parts = msg.Content.Split(WordSeparator);
 
             if (parts[0].StartsWith(TagStart) && parts[0].EndsWith(TagEnd))
@@ -71,5 +86,21 @@ namespace SBLogAnalyzer.Data
                 return false;
             }
         }
+
+        public static bool TryParse(LogMessage msg, out TaggedMessage message)
+        {
+            message = null;
+            try
+            {
+                message = Parse(msg);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
     }
 }

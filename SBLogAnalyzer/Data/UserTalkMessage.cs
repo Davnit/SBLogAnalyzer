@@ -12,6 +12,8 @@ namespace SBLogAnalyzer.Data
         public const string UserEnd = ">";
         public const string WhisperStart = "<From ";
 
+        #region Constructors
+
         public UserTalkMessage()
         {
             Username = String.Empty;
@@ -24,6 +26,10 @@ namespace SBLogAnalyzer.Data
             Timestamp = msg.Timestamp;
             Content = msg.Content;
         }
+
+        #endregion
+
+        #region Properties
 
         public string Username
         {
@@ -43,15 +49,24 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        #endregion
+
         public override string ToString()
         {
             bool isEmote = (Type == EventType.UserEmote);
             return String.Concat(Timestamp, WordSeparator, UserStart, Username, isEmote ? Content : UserEnd, isEmote ? UserEnd : Content);
         }
 
+        #region Static Methods
+
         public static new UserTalkMessage Parse(string line)
         {
-            UserTalkMessage msg = new UserTalkMessage(LogMessage.Parse(line));
+            return Parse(LogMessage.Parse(line));
+        }
+
+        public static UserTalkMessage Parse(LogMessage message)
+        {
+            UserTalkMessage msg = new UserTalkMessage(message);
             string[] parts = msg.Content.Split(WordSeparator);
 
             if (parts[0].StartsWith(UserStart) && parts[0].EndsWith(UserEnd))
@@ -87,5 +102,21 @@ namespace SBLogAnalyzer.Data
                 return false;
             }
         }
+
+        public static bool TryParse(LogMessage msg, out UserTalkMessage message)
+        {
+            mmessage = null;
+            try
+            {
+                message = Parse(line);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
     }
 }
