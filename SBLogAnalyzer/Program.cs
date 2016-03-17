@@ -26,14 +26,14 @@ namespace SBLogAnalyzer
 
                 int fileCount = 0, totalLines = 0;
                 long totalSize = 0;
-                foreach (FileInfo file in logDir.EnumerateFiles("*.txt"))
+                foreach (FileInfo file in logDir.EnumerateFiles("*.txt").OrderBy(f => f.CreationTime))
                 {
                     if (file.Name.ContainsAny(doNotProcess))
                         continue;
 
                     long fileSize = file.Length;
                     totalSize += fileSize;
-                    Console.WriteLine("Processing file: {0} [{1} KB]", file.Name, (fileSize / 1000));
+                    Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));
 
                     int lineNumber = 0;
 
@@ -50,7 +50,7 @@ namespace SBLogAnalyzer
                             messages.Add(LogMessage.Parse(line));
                         }
                     }
-                    Console.WriteLine("\tRead {0} lines.", lineNumber);
+                    Console.WriteLine("... {0} lines.", lineNumber);
                 }
 
                 Console.WriteLine("Processing complete.");
@@ -59,7 +59,7 @@ namespace SBLogAnalyzer
                 Console.WriteLine("  Messages: {0}", messages.Count);
                 Console.WriteLine("     Files: {0}", fileCount);
                 Console.WriteLine("     Lines: {0}", totalLines);
-                Console.WriteLine("Total Size: {0}", totalSize);
+                Console.WriteLine("Total Size: {0:n2} MB", ((totalSize / 1000) / 1000));
                 Console.WriteLine();
             }
 
