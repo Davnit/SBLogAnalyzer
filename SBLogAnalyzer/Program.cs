@@ -47,7 +47,21 @@ namespace SBLogAnalyzer
                         string line = reader.ReadLine();
                         if (line.Trim().Length > 0)
                         {
-                            messages.Add(LogMessage.Parse(line));
+                            string check = line.Trim();
+                            if (check.StartsWith(LogMessage.StampStart) && check.Contains(LogMessage.StampEnd) && !check.EndsWith(LogMessage.StampEnd))
+                            {
+                                try
+                                {
+                                    messages.Add(LogMessage.Parse(line));
+                                }
+                                catch
+                                {
+                                    Console.WriteLine("Exception raised while parsing message.");
+                                    Console.WriteLine(" - Current file: {0}", file.Name);
+                                    Console.WriteLine(" -  Line number: {0}", lineNumber);
+                                    throw;
+                                }
+                            }
                         }
                     }
                     Console.WriteLine("... {0} lines.", lineNumber);
@@ -59,7 +73,7 @@ namespace SBLogAnalyzer
                 Console.WriteLine("  Messages: {0}", messages.Count);
                 Console.WriteLine("     Files: {0}", fileCount);
                 Console.WriteLine("     Lines: {0}", totalLines);
-                Console.WriteLine("Total Size: {0:n2} MB", ((totalSize / 1000) / 1000));
+                Console.WriteLine("Total Size: {0:n2} MB", ((double)(totalSize / 1000) / 1000));
                 Console.WriteLine();
             }
 

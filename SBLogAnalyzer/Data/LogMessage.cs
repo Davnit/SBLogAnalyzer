@@ -51,7 +51,7 @@ namespace SBLogAnalyzer.Data
 
         public static LogMessage Parse(string line)
         {
-            line = line.Replace("\0", String.Empty);
+            line = line.TrimStart('\0', '\t', ' ');
             string[] parts = line.Split(WordSeparator);
 
             LogMessage msg = new LogMessage();
