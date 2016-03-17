@@ -35,6 +35,8 @@ namespace SBLogAnalyzer
                     totalSize += fileSize;
                     Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));
 
+                    #region File Processing
+
                     int lineNumber = 0;
 
                     fileCount++;
@@ -64,6 +66,8 @@ namespace SBLogAnalyzer
                             }
                         }
                     }
+                    #endregion
+
                     Console.WriteLine("... {0} lines.", lineNumber);
                 }
 
@@ -75,6 +79,126 @@ namespace SBLogAnalyzer
                 Console.WriteLine("     Lines: {0}", totalLines);
                 Console.WriteLine("Total Size: {0:n2} MB", ((double)(totalSize / 1000) / 1000));
                 Console.WriteLine();
+
+                Console.WriteLine("Beginning analysis ...");
+
+                Dictionary<string, int> tagTracker = new Dictionary<string, int>();
+                Dictionary<string, int> joinTracker = new Dictionary<string, int>();
+                Dictionary<string, int> talkTracker = new Dictionary<string, int>();
+
+                string inClanDelim = ", in clan ";
+                Dictionary<string, JoinLeaveMessage> foundClanTags = new Dictionary<string, JoinLeaveMessage>();
+
+                int tagCount = 0, joinCount = 0, talkCount = 0;
+                for (int i = 0; i < messages.Count; i++)
+                {
+                    LogMessage message = messages[i];
+
+                    #region Message Upgrading
+
+                    if (message.Content.StartsWith(TaggedMessage.TagStart))
+                    {
+                        TaggedMessage newMsg;
+                        if (TaggedMessage.TryParse(message, out newMsg))
+                        {
+                            message = newMsg;
+                            tagCount++;
+
+                            if (!tagTracker.ContainsKey(newMsg.Tag))
+                                tagTracker.Add(newMsg.Tag, 1);
+                            else
+                                tagTracker[newMsg.Tag]++;
+                        }
+                    }
+                    else if (message.Content.StartsWith(JoinLeaveMessage.EventMessagePrefix) &&
+                        (message.Content.Contains(JoinLeaveMessage.JoinMessageText) || message.Content.Contains(JoinLeaveMessage.LeaveMessageText)))
+                    {
+                        JoinLeaveMessage newMsg;
+                        if (JoinLeaveMessage.TryParse(message, out newMsg))
+                        {
+                            message = newMsg;
+                            joinCount++;
+
+                            if (newMsg.Type == EventType.UserJoin)
+                            {
+                                if (!joinTracker.ContainsKey(newMsg.Username))
+                                    joinTracker.Add(newMsg.Username, 1);
+                                else
+                                    joinTracker[newMsg.Username]++;
+
+                                
+                                if (newMsg.Content.Contains(inClanDelim))
+                                {
+                                    int tagIndex = newMsg.Content.IndexOf(inClanDelim) + inClanDelim.Length;
+                                    string tag = newMsg.Content.Substring(tagIndex, 4).Trim();
+                                    if (tag.EndsWith(")"))
+                                        tag = tag.Substring(0, 3);
+
+                                    if (!foundClanTags.ContainsKey(tag))
+                                        foundClanTags.Add(tag, newMsg);
+                                }
+                            }
+                        }
+                    }
+                    else if (message.Content.StartsWith(UserTalkMessage.UserStart))
+                    {
+                        UserTalkMessage newMsg;
+                        if (UserTalkMessage.TryParse(message, out newMsg))
+                        {
+                            message = newMsg;
+                            talkCount++;
+
+                            if (!talkTracker.ContainsKey(newMsg.Username))
+                                talkTracker.Add(newMsg.Username, 1);
+                            else
+                                talkTracker[newMsg.Username]++;
+                        }
+                    }
+
+                    #endregion
+                }
+
+                int totalUpgrade = (tagCount + joinCount + talkCount);
+                Console.WriteLine("Upgraded {0}\\{1} messages:", totalUpgrade, (messages.Count - totalUpgrade));
+                Console.WriteLine("\t - {0} tagged", tagCount);
+                Console.WriteLine("\t - {0} join/leaves", joinCount);
+                Console.WriteLine("\t - {0} user talks", talkCount);
+                Console.WriteLine();
+
+                Console.WriteLine("{0} unique users were seen.", joinTracker.Keys.Concat(talkTracker.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+                Console.WriteLine();
+
+                #region Print Record Holders
+
+                int position = 0;
+                Console.WriteLine("Most joined:");
+                foreach (KeyValuePair<string, int> kvp in joinTracker.Where(o => o.Value > 10).OrderByDescending(o => o.Value))
+                {
+                    position++;
+                    Console.Write(" - #{0} -> ", position);
+                    Console.Write(kvp.Key);
+                    Console.Write(": ");
+                    Console.WriteLine(kvp.Value);
+                }
+
+                position = 0;
+                Console.WriteLine("Most talked:");
+                foreach (KeyValuePair<string, int> kvp in talkTracker.Where(o => o.Value > 10).OrderByDescending(o => o.Value))
+                {
+                    position++;
+                    Console.Write(" - #{0} -> ", position);
+                    Console.Write(kvp.Key);
+                    Console.Write(": ");
+                    Console.WriteLine(kvp.Value);
+                }
+
+                #endregion
+
+                Console.WriteLine("Found {0} clan tags: ", foundClanTags.Count);
+                foreach (KeyValuePair<string, JoinLeaveMessage> kvp in foundClanTags)
+                {
+                    Console.WriteLine(" - {0} seen on user {1}", kvp.Key, kvp.Value.Username);
+                }
             }
 
             Console.ReadKey();
