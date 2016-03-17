@@ -9,6 +9,10 @@ namespace SBLogAnalyzer.Data
     public class LogMessage
     {
         public const char WordSeparator = ' ';
+        public const string StampStart = "[";
+        public const string StampEnd = "]";
+
+        public static readonly char[] TimestampCharacters = new char[7] { '[', ']', ':', '.', 'A', 'P', 'M' };
 
         #region Constructors
 
@@ -47,20 +51,31 @@ namespace SBLogAnalyzer.Data
 
         public static LogMessage Parse(string line)
         {
+            line = line.Replace("\0", String.Empty);
             string[] parts = line.Split(WordSeparator);
 
             LogMessage msg = new LogMessage();
             msg.Timestamp = parts[0];
-            msg.Content = parts[1];
+            msg.Content = line.Substring(parts[0].Length + 1);
 
-            if (!msg.Timestamp.StartsWith("[") || !msg.Timestamp.EndsWith("]"))
+            if (!msg.Timestamp.StartsWith(StampStart))
                 throw InvalidFormatException;
 
-            char[] allowed = new char[5] { ':', '.', 'A', 'P', 'M' };
+            if (!msg.Timestamp.EndsWith(StampEnd))
+            {
+                if (parts[1].EndsWith(StampEnd))
+                {
+                    msg.Timestamp += parts[1];
+                    msg.Content = msg.Content.Substring(parts[1].Length + 1);
+                }
+                else
+                    throw InvalidFormatException;
+            }
+
             for (int i = 0; i < msg.Timestamp.Length; i++)
             {
                 char x = msg.Timestamp[i];
-                if (!char.IsNumber(x) && !allowed.Contains(x))
+                if (!char.IsNumber(x) && !TimestampCharacters.Contains(x))
                     throw InvalidFormatException;
             }
             return msg;
