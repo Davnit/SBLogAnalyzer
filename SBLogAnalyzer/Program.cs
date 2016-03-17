@@ -12,6 +12,10 @@ namespace SBLogAnalyzer
     {
         static void Main(string[] args)
         {
+            Console.WriteLine(" -- StealthBot Log Analyzer");
+            Console.WriteLine(" -- by Pyro");
+            Console.WriteLine();
+
             DirectoryInfo logDir = new DirectoryInfo(Path.Combine(Environment.CurrentDirectory, "Logs"));
             if (!logDir.Exists)
             {
@@ -40,6 +44,8 @@ namespace SBLogAnalyzer
                     int lineNumber = 0;
 
                     fileCount++;
+                    DateTime fileDate = DateTime.Parse(Path.GetFileNameWithoutExtension(file.Name)).Date;
+
                     StreamReader reader = file.OpenText();
                     while (!reader.EndOfStream)
                     {
@@ -54,7 +60,9 @@ namespace SBLogAnalyzer
                             {
                                 try
                                 {
-                                    messages.Add(LogMessage.Parse(line));
+                                    LogMessage msg = LogMessage.Parse(line);
+                                    msg.SetDate(fileDate);
+                                    messages.Add(msg);
                                 }
                                 catch
                                 {
@@ -90,6 +98,7 @@ namespace SBLogAnalyzer
                 Dictionary<string, JoinLeaveMessage> foundClanTags = new Dictionary<string, JoinLeaveMessage>();
 
                 int tagCount = 0, joinCount = 0, talkCount = 0;
+                int wordCount = 0;
                 for (int i = 0; i < messages.Count; i++)
                 {
                     LogMessage message = messages[i];
@@ -131,8 +140,8 @@ namespace SBLogAnalyzer
                                 {
                                     int tagIndex = newMsg.Content.IndexOf(inClanDelim) + inClanDelim.Length;
                                     string tag = newMsg.Content.Substring(tagIndex, 4).Trim();
-                                    if (tag.EndsWith(")"))
-                                        tag = tag.Substring(0, 3);
+                                    if (tag.Contains(")"))
+                                        tag = tag.Substring(0, tag.IndexOf(")"));
 
                                     if (!foundClanTags.ContainsKey(tag))
                                         foundClanTags.Add(tag, newMsg);
@@ -152,6 +161,8 @@ namespace SBLogAnalyzer
                                 talkTracker.Add(newMsg.Username, 1);
                             else
                                 talkTracker[newMsg.Username]++;
+
+                            wordCount += newMsg.Content.Split(LogMessage.WordSeparator).Count(w => w.Length > 1);
                         }
                     }
 
@@ -159,26 +170,30 @@ namespace SBLogAnalyzer
                 }
 
                 int totalUpgrade = (tagCount + joinCount + talkCount);
-                Console.WriteLine("Upgraded {0}\\{1} messages:", totalUpgrade, (messages.Count - totalUpgrade));
+                Console.WriteLine("Upgraded {0}\\{1} messages:", totalUpgrade, messages.Count);
                 Console.WriteLine("\t - {0} tagged", tagCount);
                 Console.WriteLine("\t - {0} join/leaves", joinCount);
                 Console.WriteLine("\t - {0} user talks", talkCount);
                 Console.WriteLine();
 
                 Console.WriteLine("{0} unique users were seen.", joinTracker.Keys.Concat(talkTracker.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+                Console.WriteLine("~{0} words were received in chat", wordCount);
                 Console.WriteLine();
 
                 #region Print Record Holders
 
                 int position = 0;
                 Console.WriteLine("Most joined:");
-                foreach (KeyValuePair<string, int> kvp in joinTracker.Where(o => o.Value > 10).OrderByDescending(o => o.Value))
+                foreach (KeyValuePair<string, int> kvp in joinTracker.OrderByDescending(o => o.Value))
                 {
                     position++;
                     Console.Write(" - #{0} -> ", position);
                     Console.Write(kvp.Key);
                     Console.Write(": ");
                     Console.WriteLine(kvp.Value);
+
+                    if (position == 20)
+                        break;
                 }
 
                 position = 0;
@@ -190,14 +205,17 @@ namespace SBLogAnalyzer
                     Console.Write(kvp.Key);
                     Console.Write(": ");
                     Console.WriteLine(kvp.Value);
+
+                    if (position == 20)
+                        break;
                 }
 
                 #endregion
 
                 Console.WriteLine("Found {0} clan tags: ", foundClanTags.Count);
-                foreach (KeyValuePair<string, JoinLeaveMessage> kvp in foundClanTags)
+                foreach (KeyValuePair<string, JoinLeaveMessage> kvp in foundClanTags.OrderByDescending(p => p.Value.Time))
                 {
-                    Console.WriteLine(" - {0} seen on user {1}", kvp.Key, kvp.Value.Username);
+                    Console.WriteLine(" - {0} seen on {1} -> {2}", kvp.Key, kvp.Value.Username.Split('@')[0], kvp.Value.Time.ToString("MMM d, yyyy @ h:mm tt"));
                 }
             }
 

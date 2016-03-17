@@ -22,6 +22,7 @@ namespace SBLogAnalyzer.Data
         {
             Timestamp = msg.Timestamp;
             Content = msg.Content;
+            Time = msg.Time;
         }
 
         #endregion

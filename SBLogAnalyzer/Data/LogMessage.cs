@@ -38,7 +38,23 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        public DateTime Time
+        {
+            get;
+            protected set;
+        }
+
         #endregion
+
+        public void SetDate(DateTime date)
+        {
+            Time = new DateTime(date.Year, date.Month, date.Day, Time.Hour, Time.Minute, Time.Second, Time.Millisecond, DateTimeKind.Local);
+        }
+
+        public void SetTime(DateTime time)
+        {
+            Time = new DateTime(Time.Year, Time.Month, Time.Day, time.Hour, time.Minute, time.Second, time.Millisecond, DateTimeKind.Local);
+        }
 
         public override string ToString()
         {
@@ -78,6 +94,8 @@ namespace SBLogAnalyzer.Data
                 if (!char.IsNumber(x) && !TimestampCharacters.Contains(x))
                     throw InvalidFormatException;
             }
+
+            msg.SetTime(DateTime.Parse(msg.Timestamp.Substring(1, msg.Timestamp.Length - 2)));
             return msg;
         }
 
