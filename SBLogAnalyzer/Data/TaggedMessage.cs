@@ -100,6 +100,16 @@ namespace SBLogAnalyzer.Data
             }
         }
 
+        public static bool QuickCheck(LogMessage message)
+        {
+            string content = message.Content.Trim();
+            if (content.Length == 0) return false;
+
+            // Tags shouldn't have spaces in them. I've never seen one that did.
+            return (content.StartsWith(TagStart) && content.Contains(TagEnd) && 
+                (content.IndexOf(TagEnd) < content.IndexOf(WordSeparator)));
+        }
+
         #endregion
     }
 }

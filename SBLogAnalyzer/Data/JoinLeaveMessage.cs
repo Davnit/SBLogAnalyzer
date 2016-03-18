@@ -109,6 +109,15 @@ namespace SBLogAnalyzer.Data
             }
         }
 
+        public static bool QuickCheck(LogMessage message)
+        {
+            string content = message.Content.Trim();
+            if (content.Length == 0) return false;
+
+            return (content.StartsWith(EventMessagePrefix) &&
+                (content.Contains(JoinMessageText) || content.Contains(LeaveMessageText)));
+        }
+
         #endregion
     }
 }

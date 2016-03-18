@@ -116,6 +116,18 @@ namespace SBLogAnalyzer.Data
             }
         }
 
+        public static bool QuickCheck(LogMessage message)
+        {
+            string content = message.Content.Trim();
+            if (content.Length == 0) return false;
+
+            // There is a problem here if D2 naming conventions are turned on.
+            //   I'm not quite sure what to do about that, but I don't think the actual
+            //   parsing methods handle it either, so I'm going to ignore it for now.
+            return (content.StartsWith(UserStart) && content.Contains(UserEnd) &&
+                (content.IndexOf(UserEnd) < content.IndexOf(WordSeparator))) ;
+        }
+
         #endregion
     }
 }

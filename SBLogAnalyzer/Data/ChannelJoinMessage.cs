@@ -9,6 +9,7 @@ namespace SBLogAnalyzer.Data
     public class ChannelJoinMessage : LogMessage
     {
         public const string JoinedChannel = "-- Joined channel: ";
+        public const string ChannelPostfix = " --";
         public const string ClanPrefix = "clan";
 
         #region Constructors
@@ -50,7 +51,7 @@ namespace SBLogAnalyzer.Data
             if (msg.Content.StartsWith(JoinedChannel))
             {
                 msg.Channel = msg.Content.Substring(JoinedChannel.Length);
-                msg.Channel = msg.Channel.Substring(0, msg.Channel.Length - 3);
+                msg.Channel = msg.Channel.Substring(0, msg.Channel.Length - ChannelPostfix.Length);
 
                 msg.IsClan = msg.Channel.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
             }
@@ -86,6 +87,14 @@ namespace SBLogAnalyzer.Data
             {
                 return false;
             }
+        }
+
+        public static bool QuickCheck(LogMessage message)
+        {
+            string content = message.Content.Trim();
+            if (content.Length == 0) return false;
+
+            return (content.StartsWith(JoinedChannel) && content.EndsWith(ChannelPostfix));
         }
 
         #endregion

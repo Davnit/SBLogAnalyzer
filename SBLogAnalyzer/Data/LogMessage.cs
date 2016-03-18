@@ -9,8 +9,9 @@ namespace SBLogAnalyzer.Data
     public class LogMessage
     {
         public const char WordSeparator = ' ';
-        public const string StampStart = "[";
-        public const string StampEnd = "]";
+        public const string TimestampStart = "[";
+        public const string TimestampEnd = "]";
+        public const int MaxTimestampLength = 14;
 
         public static readonly char[] TimestampCharacters = new char[7] { '[', ']', ':', '.', 'A', 'P', 'M' };
 
@@ -92,12 +93,12 @@ namespace SBLogAnalyzer.Data
             msg.Timestamp = parts[0];
             msg.Content = line.Substring(parts[0].Length + 1);
 
-            if (!msg.Timestamp.StartsWith(StampStart))
+            if (!msg.Timestamp.StartsWith(TimestampStart))
                 throw InvalidFormatException;
 
-            if (!msg.Timestamp.EndsWith(StampEnd))
+            if (!msg.Timestamp.EndsWith(TimestampEnd))
             {
-                if (parts[1].EndsWith(StampEnd))
+                if (parts[1].EndsWith(TimestampEnd))
                 {
                     msg.Timestamp += parts[1];
                     msg.Content = msg.Content.Substring(parts[1].Length + 1);
@@ -129,6 +130,17 @@ namespace SBLogAnalyzer.Data
             {
                 return false;
             }
+        }
+
+        public static bool QuickCheck(string line)
+        {
+            if ((line.Length > 1) && (line[0] == WordSeparator)) return false;
+
+            line = line.Trim();
+            if (line.Length == 0) return false;
+
+            // This assumes the maximum length timestamp is "[01:07:14.785]" which is true as of SB 2.7 b487
+            return (line.StartsWith(TimestampStart) && line.Substring(0, ((line.Length > MaxTimestampLength) ? MaxTimestampLength : line.Length)).Contains(TimestampEnd));
         }
 
         #endregion
