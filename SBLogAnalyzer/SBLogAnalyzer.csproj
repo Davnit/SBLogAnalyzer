@@ -47,6 +47,7 @@
     <Compile Include="Data\ChannelJoinMessage.cs" />
     <Compile Include="Data\EventType.cs" />
     <Compile Include="Data\JoinLeaveMessage.cs" />
+    <Compile Include="Data\KickBanMessage.cs" />
     <Compile Include="Data\LogMessage.cs" />
     <Compile Include="Data\TaggedMessage.cs" />
     <Compile Include="Data\UserTalkMessage.cs" />

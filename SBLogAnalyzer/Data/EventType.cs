@@ -14,6 +14,8 @@ namespace SBLogAnalyzer.Data
         JoinedChannel,
         UserTalk,
         UserEmote,
-        Whisper
+        Whisper,
+        Kick,
+        Ban
     }
 }

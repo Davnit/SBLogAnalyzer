@@ -35,6 +35,7 @@ namespace SBLogAnalyzer
 
             List<LogMessage> messages = new List<LogMessage>();
             StringComparison sComp = StringComparison.OrdinalIgnoreCase;
+            StringComparer comparer = StringComparer.OrdinalIgnoreCase;
 
             // Number of files, lines, and bytes.
             int fileCount = 0, totalLines = 0;
@@ -115,6 +116,12 @@ namespace SBLogAnalyzer
                                     if (UserTalkMessage.TryParse(msg, out utm))
                                         msg = utm;
                                 }
+                                else if (KickBanMessage.QuickCheck(msg))
+                                {
+                                    KickBanMessage kbm;
+                                    if (KickBanMessage.TryParse(msg, out kbm))
+                                        msg = kbm;
+                                }
 
                                 #endregion
 
@@ -193,15 +200,17 @@ namespace SBLogAnalyzer
             var chat = messages.Where(m => m is UserTalkMessage).Select(m => (UserTalkMessage)m); ;
             var joins = messages.Where(m => m is JoinLeaveMessage).Select(m => (JoinLeaveMessage)m); ;
             var channels = messages.Where(m => m is ChannelJoinMessage).Select(m => (ChannelJoinMessage)m);
+            var removals = messages.Where(m => m is KickBanMessage).Select(m => (KickBanMessage)m);
 
             Console.WriteLine(" - {0} chat messages", chat.Count());
-            Console.WriteLine(" - {0} channels visited", channels.Select(m => m.Channel).Distinct(StringComparer.OrdinalIgnoreCase).Count());
-            Console.WriteLine(" - {0} unique users seen", chat.Select(m => m.Username).Concat(joins.Select(m => m.Username)).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Console.WriteLine(" - {0} channels", channels.Select(m => m.Channel).Distinct(comparer).Count());
+            Console.WriteLine(" - {0} unique users", chat.Select(m => m.Username).Concat(joins.Select(m => m.Username)).Distinct(comparer).Count());
+            Console.WriteLine(" - {0} operator actions", removals.Count());
             Console.WriteLine();
 
             int position = 0;
             Console.WriteLine("Most joined channels: ");
-            foreach (var res in channels.Select(c => c.Channel).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            foreach (var res in channels.Select(c => c.Channel).GroupBy(s => s, comparer).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
             {
                 position++;
                 Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
@@ -213,7 +222,7 @@ namespace SBLogAnalyzer
 
             position = 0;
             Console.WriteLine("Most active channels: ");
-            foreach (var res in chat.Select(c => c.Channel).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            foreach (var res in chat.Select(c => c.Channel).GroupBy(s => s, comparer).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
             {
                 position++;
                 Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
@@ -225,7 +234,7 @@ namespace SBLogAnalyzer
 
             position = 0;
             Console.WriteLine("Most active users: ");
-            foreach (var res in chat.Select(c => c.Username).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            foreach (var res in chat.Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
             {
                 position++;
                 Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
@@ -234,6 +243,41 @@ namespace SBLogAnalyzer
                     break;
             }
             Console.WriteLine();
+
+            position = 0;
+            Console.WriteLine("Most kicked users: ");
+            foreach (var res in removals.Where(r => r.Type == EventType.Kick).Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
+
+                if (position == 10)
+                    break;
+            }
+            Console.WriteLine();
+
+            position = 0;
+            Console.WriteLine("Most banned users: ");
+            foreach (var res in removals.Where(r => r.Type == EventType.Ban).Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
+
+                if (position == 10)
+                    break;
+            }
+            Console.WriteLine();
+
+            position = 0;
+            Console.WriteLine("Most active operators: ");
+            foreach (var res in removals.Select(c => c.KickedBy).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
+
+                if (position == 10)
+                    break;
+            }
 
             Console.WriteLine("Work complete!");
             Console.ReadKey();
