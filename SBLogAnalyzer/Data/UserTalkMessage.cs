@@ -21,7 +21,7 @@ namespace SBLogAnalyzer.Data
             Content = String.Empty;
         }
 
-        public UserTalkMessage(LogMessage msg) : this()
+        private UserTalkMessage(LogMessage msg) : this()
         {
             Timestamp = msg.Timestamp;
             Content = msg.Content;

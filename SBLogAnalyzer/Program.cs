@@ -90,14 +90,17 @@ namespace SBLogAnalyzer
 
                 Console.WriteLine("Beginning analysis ...");
 
-                Dictionary<string, int> tagTracker = new Dictionary<string, int>();
-                Dictionary<string, int> joinTracker = new Dictionary<string, int>();
-                Dictionary<string, int> talkTracker = new Dictionary<string, int>();
+                Dictionary<string, int> tagTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, int> joinTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, int> talkTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
                 string inClanDelim = ", in clan ";
                 Dictionary<string, JoinLeaveMessage> foundClanTags = new Dictionary<string, JoinLeaveMessage>();
 
-                int tagCount = 0, joinCount = 0, talkCount = 0;
+                Dictionary<string, List<ChannelJoinMessage>> channelTracker = new Dictionary<string, List<ChannelJoinMessage>>(StringComparer.OrdinalIgnoreCase);
+
+                int tagCount = 0, joinCount = 0, talkCount = 0, channelCount = 0;
+                int clanUnique = 0, clanTotal = 0;
                 int wordCount = 0;
                 for (int i = 0; i < messages.Count; i++)
                 {
@@ -165,15 +168,39 @@ namespace SBLogAnalyzer
                             wordCount += newMsg.Content.Split(LogMessage.WordSeparator).Count(w => w.Length > 1);
                         }
                     }
+                    else if (message.Content.StartsWith(ChannelJoinMessage.JoinedChannel))
+                    {
+                        ChannelJoinMessage newMsg;// = ChannelJoinMessage.Parse(message);
+                        if (ChannelJoinMessage.TryParse(message, out newMsg))
+                        {
+                            message = newMsg;
+                            channelCount++;
+
+                            string channel = newMsg.ChannelName;
+                            if (!channelTracker.ContainsKey(channel))
+                            {
+                                channelTracker.Add(channel, new List<ChannelJoinMessage>());
+                                if (newMsg.IsClanChannel)
+                                    clanUnique++;
+                            }
+
+                            channelTracker[channel].Add(newMsg);
+
+                            if (newMsg.IsClanChannel)
+                                clanTotal++;
+                        }
+                    }
 
                     #endregion
                 }
 
-                int totalUpgrade = (tagCount + joinCount + talkCount);
+                int totalUpgrade = (tagCount + joinCount + talkCount + channelCount);
                 Console.WriteLine("Upgraded {0}\\{1} messages:", totalUpgrade, messages.Count);
                 Console.WriteLine("\t - {0} tagged", tagCount);
                 Console.WriteLine("\t - {0} join/leaves", joinCount);
                 Console.WriteLine("\t - {0} user talks", talkCount);
+                Console.WriteLine("\t - {0} channels joined", channelCount);
+                Console.WriteLine("\t - {0} clans visited {1} times", clanUnique, clanTotal);
                 Console.WriteLine();
 
                 Console.WriteLine("{0} unique users were seen.", joinTracker.Keys.Concat(talkTracker.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Count());
@@ -195,10 +222,11 @@ namespace SBLogAnalyzer
                     if (position == 20)
                         break;
                 }
+                Console.WriteLine();
 
                 position = 0;
                 Console.WriteLine("Most talked:");
-                foreach (KeyValuePair<string, int> kvp in talkTracker.Where(o => o.Value > 10).OrderByDescending(o => o.Value))
+                foreach (KeyValuePair<string, int> kvp in talkTracker.OrderByDescending(o => o.Value))
                 {
                     position++;
                     Console.Write(" - #{0} -> ", position);
@@ -209,14 +237,36 @@ namespace SBLogAnalyzer
                     if (position == 20)
                         break;
                 }
+                Console.WriteLine();
 
                 #endregion
 
-                Console.WriteLine("Found {0} clan tags: ", foundClanTags.Count);
+                position = 0;
+                Console.WriteLine("Found {0} clan tags, most recently: ", foundClanTags.Count);
                 foreach (KeyValuePair<string, JoinLeaveMessage> kvp in foundClanTags.OrderByDescending(p => p.Value.Time))
                 {
+                    position++;
                     Console.WriteLine(" - {0} seen on {1} -> {2}", kvp.Key, kvp.Value.Username.Split('@')[0], kvp.Value.Time.ToString("MMM d, yyyy @ h:mm tt"));
+
+                    if (position == 20)
+                        break;
                 }
+                Console.WriteLine();
+
+                position = 0;
+                Console.WriteLine("Most joined channels:");
+                foreach (KeyValuePair<string, List<ChannelJoinMessage>> kvp in channelTracker.OrderByDescending(p => p.Value.Count))
+                {
+                    position++;
+                    Console.Write(" - #{0} -> ", position);
+                    Console.Write(kvp.Key);
+                    Console.Write(": ");
+                    Console.WriteLine(kvp.Value.Count);
+
+                    if (position == 20)
+                        break;
+                }
+                Console.WriteLine();
             }
 
             Console.ReadKey();
