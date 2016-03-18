@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChannelStats.cs" />
     <Compile Include="Data\ChannelJoinMessage.cs" />
     <Compile Include="Data\EventType.cs" />
     <Compile Include="Data\JoinLeaveMessage.cs" />

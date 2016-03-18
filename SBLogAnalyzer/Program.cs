@@ -12,263 +12,230 @@ namespace SBLogAnalyzer
     {
         static void Main(string[] args)
         {
-            Console.WriteLine(" -- StealthBot Log Analyzer");
-            Console.WriteLine(" -- by Pyro");
+            Console.WriteLine("StealthBot Log Analyzer");
+            Console.WriteLine("by Pyro");
             Console.WriteLine();
 
+            // Make sure the log storage directory exists.
             DirectoryInfo logDir = new DirectoryInfo(Path.Combine(Environment.CurrentDirectory, "Logs"));
             if (!logDir.Exists)
             {
                 Console.WriteLine("Log file directory doesn't exist.");
                 logDir.Create();
+                Console.ReadKey();
+                return;
             }
-            else
+
+            // Read all of the files and parse each line into a message object.
+            //   Dates from the file names are combined with the inline timestamp to establish context.
+            //   Invalid lines and other junk are not parsed.
+
+            // Strings to indicate that a file should not be processed.
+            string[] doNotProcess = new string[4] { "WHISPERS", "PACKETLOG", "master", "commands" };
+
+            List<LogMessage> messages = new List<LogMessage>();
+            StringComparison sComp = StringComparison.OrdinalIgnoreCase;
+
+            // Number of files, lines, and bytes.
+            int fileCount = 0, totalLines = 0;
+            long totalSize = 0;
+
+            // Largest file and its size.
+            string largestFile = String.Empty;
+            long largestSize = 0;
+
+            foreach (FileInfo file in logDir.EnumerateFiles("*.txt").OrderBy(f => f.CreationTime))
             {
-                string[] doNotProcess = new string[4] { "WHISPERS", "PACKETLOG", "master", "commands" };
+                if (file.Name.ContainsAny(doNotProcess))
+                    continue;
 
-                List<LogMessage> messages = new List<LogMessage>();
-
-                int fileCount = 0, totalLines = 0;
-                long totalSize = 0;
-                foreach (FileInfo file in logDir.EnumerateFiles("*.txt").OrderBy(f => f.CreationTime))
+                // How big is this file?
+                long fileSize = file.Length;
+                if (fileSize > largestSize)
                 {
-                    if (file.Name.ContainsAny(doNotProcess))
-                        continue;
+                    largestFile = file.Name;
+                    largestSize = fileSize;
+                }
 
-                    long fileSize = file.Length;
-                    totalSize += fileSize;
-                    Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));
+                totalSize += fileSize;
+                Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));
 
-                    #region File Processing
+                #region File Processing
 
-                    int lineNumber = 0;
+                int lineNumber = 0;
+                fileCount++;
 
-                    fileCount++;
-                    DateTime fileDate = DateTime.Parse(Path.GetFileNameWithoutExtension(file.Name)).Date;
+                // Get the date from the file name.
+                DateTime fileDate = DateTime.Parse(Path.GetFileNameWithoutExtension(file.Name)).Date;
 
-                    StreamReader reader = file.OpenText();
+                // Read the file
+                using (StreamReader reader = file.OpenText())
+                {
                     while (!reader.EndOfStream)
                     {
                         lineNumber++;
                         totalLines++;
 
                         string line = reader.ReadLine();
-                        if (line.Trim().Length > 0)
+
+                        // Make sure the line is at least somewhat valid
+                        //   Some messages are shown without timestamps, such as plugin system /updates
+                        //   We don't really care about these, so they shouldn't be parsed.
+                        if (LogMessage.QuickCheck(line))
                         {
-                            string check = line.Trim();
-                            if (check.StartsWith(LogMessage.StampStart) && check.Contains(LogMessage.StampEnd) && !check.EndsWith(LogMessage.StampEnd))
+                            try
                             {
-                                try
+                                LogMessage msg = LogMessage.Parse(line);
+                                msg.SetDate(fileDate);
+
+                                // is there... more?
+                                #region Upgrade Checks
+
+                                if (TaggedMessage.QuickCheck(msg))
                                 {
-                                    LogMessage msg = LogMessage.Parse(line);
-                                    msg.SetDate(fileDate);
-                                    messages.Add(msg);
+                                    TaggedMessage tagged;
+                                    if (TaggedMessage.TryParse(msg, out tagged))
+                                        msg = tagged;
                                 }
-                                catch
+                                else if (ChannelJoinMessage.QuickCheck(msg))
                                 {
-                                    Console.WriteLine("Exception raised while parsing message.");
-                                    Console.WriteLine(" - Current file: {0}", file.Name);
-                                    Console.WriteLine(" -  Line number: {0}", lineNumber);
-                                    throw;
+                                    ChannelJoinMessage join;
+                                    if (ChannelJoinMessage.TryParse(msg, out join))
+                                        msg = join;
                                 }
+                                else if (JoinLeaveMessage.QuickCheck(msg))
+                                {
+                                    JoinLeaveMessage jlm;
+                                    if (JoinLeaveMessage.TryParse(msg, out jlm))
+                                        msg = jlm;
+                                }
+                                else if (UserTalkMessage.QuickCheck(msg))
+                                {
+                                    UserTalkMessage utm;
+                                    if (UserTalkMessage.TryParse(msg, out utm))
+                                        msg = utm;
+                                }
+
+                                #endregion
+
+                                messages.Add(msg);
+                            }
+                            catch
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine("Exception raised while parsing message.");
+                                Console.WriteLine(" - Current file: {0}", file.Name);
+                                Console.WriteLine(" -  Line number: {0}", lineNumber);
+                                throw;
                             }
                         }
                     }
-                    #endregion
-
-                    Console.WriteLine("... {0} lines.", lineNumber);
                 }
-
-                Console.WriteLine("Processing complete.");
-                Console.WriteLine();
-
-                Console.WriteLine("  Messages: {0}", messages.Count);
-                Console.WriteLine("     Files: {0}", fileCount);
-                Console.WriteLine("     Lines: {0}", totalLines);
-                Console.WriteLine("Total Size: {0:n2} MB", ((double)(totalSize / 1000) / 1000));
-                Console.WriteLine();
-
-                Console.WriteLine("Beginning analysis ...");
-
-                Dictionary<string, int> tagTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, int> joinTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, int> talkTracker = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-                string inClanDelim = ", in clan ";
-                Dictionary<string, JoinLeaveMessage> foundClanTags = new Dictionary<string, JoinLeaveMessage>();
-
-                Dictionary<string, List<ChannelJoinMessage>> channelTracker = new Dictionary<string, List<ChannelJoinMessage>>(StringComparer.OrdinalIgnoreCase);
-
-                int tagCount = 0, joinCount = 0, talkCount = 0, channelCount = 0;
-                int clanUnique = 0, clanTotal = 0;
-                int wordCount = 0;
-                for (int i = 0; i < messages.Count; i++)
-                {
-                    LogMessage message = messages[i];
-
-                    #region Message Upgrading
-
-                    if (message.Content.StartsWith(TaggedMessage.TagStart))
-                    {
-                        TaggedMessage newMsg;
-                        if (TaggedMessage.TryParse(message, out newMsg))
-                        {
-                            message = newMsg;
-                            tagCount++;
-
-                            if (!tagTracker.ContainsKey(newMsg.Tag))
-                                tagTracker.Add(newMsg.Tag, 1);
-                            else
-                                tagTracker[newMsg.Tag]++;
-                        }
-                    }
-                    else if (message.Content.StartsWith(JoinLeaveMessage.EventMessagePrefix) &&
-                        (message.Content.Contains(JoinLeaveMessage.JoinMessageText) || message.Content.Contains(JoinLeaveMessage.LeaveMessageText)))
-                    {
-                        JoinLeaveMessage newMsg;
-                        if (JoinLeaveMessage.TryParse(message, out newMsg))
-                        {
-                            message = newMsg;
-                            joinCount++;
-
-                            if (newMsg.Type == EventType.UserJoin)
-                            {
-                                if (!joinTracker.ContainsKey(newMsg.Username))
-                                    joinTracker.Add(newMsg.Username, 1);
-                                else
-                                    joinTracker[newMsg.Username]++;
-
-                                
-                                if (newMsg.Content.Contains(inClanDelim))
-                                {
-                                    int tagIndex = newMsg.Content.IndexOf(inClanDelim) + inClanDelim.Length;
-                                    string tag = newMsg.Content.Substring(tagIndex, 4).Trim();
-                                    if (tag.Contains(")"))
-                                        tag = tag.Substring(0, tag.IndexOf(")"));
-
-                                    if (!foundClanTags.ContainsKey(tag))
-                                        foundClanTags.Add(tag, newMsg);
-                                }
-                            }
-                        }
-                    }
-                    else if (message.Content.StartsWith(UserTalkMessage.UserStart))
-                    {
-                        UserTalkMessage newMsg;
-                        if (UserTalkMessage.TryParse(message, out newMsg))
-                        {
-                            message = newMsg;
-                            talkCount++;
-
-                            if (!talkTracker.ContainsKey(newMsg.Username))
-                                talkTracker.Add(newMsg.Username, 1);
-                            else
-                                talkTracker[newMsg.Username]++;
-
-                            wordCount += newMsg.Content.Split(LogMessage.WordSeparator).Count(w => w.Length > 1);
-                        }
-                    }
-                    else if (message.Content.StartsWith(ChannelJoinMessage.JoinedChannel))
-                    {
-                        ChannelJoinMessage newMsg;// = ChannelJoinMessage.Parse(message);
-                        if (ChannelJoinMessage.TryParse(message, out newMsg))
-                        {
-                            message = newMsg;
-                            channelCount++;
-
-                            string channel = newMsg.ChannelName;
-                            if (!channelTracker.ContainsKey(channel))
-                            {
-                                channelTracker.Add(channel, new List<ChannelJoinMessage>());
-                                if (newMsg.IsClanChannel)
-                                    clanUnique++;
-                            }
-
-                            channelTracker[channel].Add(newMsg);
-
-                            if (newMsg.IsClanChannel)
-                                clanTotal++;
-                        }
-                    }
-
-                    #endregion
-                }
-
-                int totalUpgrade = (tagCount + joinCount + talkCount + channelCount);
-                Console.WriteLine("Upgraded {0}\\{1} messages:", totalUpgrade, messages.Count);
-                Console.WriteLine("\t - {0} tagged", tagCount);
-                Console.WriteLine("\t - {0} join/leaves", joinCount);
-                Console.WriteLine("\t - {0} user talks", talkCount);
-                Console.WriteLine("\t - {0} channels joined", channelCount);
-                Console.WriteLine("\t - {0} clans visited {1} times", clanUnique, clanTotal);
-                Console.WriteLine();
-
-                Console.WriteLine("{0} unique users were seen.", joinTracker.Keys.Concat(talkTracker.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Count());
-                Console.WriteLine("~{0} words were received in chat", wordCount);
-                Console.WriteLine();
-
-                #region Print Record Holders
-
-                int position = 0;
-                Console.WriteLine("Most joined:");
-                foreach (KeyValuePair<string, int> kvp in joinTracker.OrderByDescending(o => o.Value))
-                {
-                    position++;
-                    Console.Write(" - #{0} -> ", position);
-                    Console.Write(kvp.Key);
-                    Console.Write(": ");
-                    Console.WriteLine(kvp.Value);
-
-                    if (position == 20)
-                        break;
-                }
-                Console.WriteLine();
-
-                position = 0;
-                Console.WriteLine("Most talked:");
-                foreach (KeyValuePair<string, int> kvp in talkTracker.OrderByDescending(o => o.Value))
-                {
-                    position++;
-                    Console.Write(" - #{0} -> ", position);
-                    Console.Write(kvp.Key);
-                    Console.Write(": ");
-                    Console.WriteLine(kvp.Value);
-
-                    if (position == 20)
-                        break;
-                }
-                Console.WriteLine();
-
                 #endregion
 
-                position = 0;
-                Console.WriteLine("Found {0} clan tags, most recently: ", foundClanTags.Count);
-                foreach (KeyValuePair<string, JoinLeaveMessage> kvp in foundClanTags.OrderByDescending(p => p.Value.Time))
-                {
-                    position++;
-                    Console.WriteLine(" - {0} seen on {1} -> {2}", kvp.Key, kvp.Value.Username.Split('@')[0], kvp.Value.Time.ToString("MMM d, yyyy @ h:mm tt"));
-
-                    if (position == 20)
-                        break;
-                }
-                Console.WriteLine();
-
-                position = 0;
-                Console.WriteLine("Most joined channels:");
-                foreach (KeyValuePair<string, List<ChannelJoinMessage>> kvp in channelTracker.OrderByDescending(p => p.Value.Count))
-                {
-                    position++;
-                    Console.Write(" - #{0} -> ", position);
-                    Console.Write(kvp.Key);
-                    Console.Write(": ");
-                    Console.WriteLine(kvp.Value.Count);
-
-                    if (position == 20)
-                        break;
-                }
-                Console.WriteLine();
+                Console.WriteLine("... {0} lines.", lineNumber);
             }
 
+            // Put all of the resulting messages into a list ordered from earliest to latest.
+            messages = messages.OrderBy(m => m.Time).ToList();
+
+            Console.WriteLine("Processing complete.");
+            Console.WriteLine();
+
+            
+            Console.WriteLine("        Files: {0}", fileCount);
+            Console.WriteLine("  Total Lines: {0}", totalLines);
+            Console.WriteLine("   Total Size: {0:n2} MB", ((double)(totalSize / 1000) / 1000));
+            Console.WriteLine(" Largest file: {0} @ {1:n0} KB", largestFile, (largestSize / 1000));
+            Console.WriteLine(" Average size: {0:n0} KB", ((totalSize / fileCount) / 1000));
+
+            Console.WriteLine("    Messages: {0}", messages.Count);
+            Console.WriteLine("   Time Span: {0:n0} days", (messages.Last().Time - messages.First().Time).TotalDays);
+
+            Console.WriteLine();
+
+            // Now that all of the files have been read and parsed, look at them a little more closely.
+            //   If we can figure out anything else about a message, it'll happen here.
+
+            Console.WriteLine("Beginning analysis ...");
+
+            // Go through all the messages and figure out what channels they are from, if any.
+            string lastChannel = String.Empty;
+            string unknownChannel = "## Unknown Channel ##";
+            foreach (LogMessage message in messages)
+            {
+                // This indicates a new channel was joined.
+                if (message is ChannelJoinMessage)
+                    lastChannel = message.Channel;
+
+                if (message is TaggedMessage)
+                {
+                    // This indicates the bot was disconnected from the server, and by extension the channel.
+                    if (((TaggedMessage)message).Tag.Equals("BNCS", sComp) && message.Content.Equals("Disconnected.", sComp))
+                        lastChannel = String.Empty;
+                }
+
+                // This indicates the user disconnected the bot.
+                if (message.Content.Equals("All connections closed.", sComp))
+                    lastChannel = String.Empty;
+
+                // Assign the channel
+                message.Channel = lastChannel;
+
+                if (message is UserTalkMessage || message is JoinLeaveMessage)
+                {
+                    if (message.Channel.Length == 0)
+                        message.Channel = unknownChannel;
+                }
+            }
+
+            // Get some sub-enums
+            var chat = messages.Where(m => m is UserTalkMessage).Select(m => (UserTalkMessage)m); ;
+            var joins = messages.Where(m => m is JoinLeaveMessage).Select(m => (JoinLeaveMessage)m); ;
+            var channels = messages.Where(m => m is ChannelJoinMessage).Select(m => (ChannelJoinMessage)m);
+
+            Console.WriteLine(" - {0} chat messages", chat.Count());
+            Console.WriteLine(" - {0} channels visited", channels.Select(m => m.Channel).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Console.WriteLine(" - {0} unique users seen", chat.Select(m => m.Username).Concat(joins.Select(m => m.Username)).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Console.WriteLine();
+
+            int position = 0;
+            Console.WriteLine("Most joined channels: ");
+            foreach (var res in channels.Select(c => c.Channel).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
+
+                if (position == 10)
+                    break;
+            }
+            Console.WriteLine();
+
+            position = 0;
+            Console.WriteLine("Most active channels: ");
+            foreach (var res in chat.Select(c => c.Channel).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
+
+                if (position == 10)
+                    break;
+            }
+            Console.WriteLine();
+
+            position = 0;
+            Console.WriteLine("Most active users: ");
+            foreach (var res in chat.Select(c => c.Username).GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            {
+                position++;
+                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
+
+                if (position == 10)
+                    break;
+            }
+            Console.WriteLine();
+
+            Console.WriteLine("Work complete!");
             Console.ReadKey();
         }
     }
