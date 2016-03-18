@@ -21,14 +21,11 @@ namespace SBLogAnalyzer
             if (!logDir.Exists)
             {
                 Console.WriteLine("Log file directory doesn't exist.");
+                Console.WriteLine("Storage created at '{0}'", logDir.FullName);
                 logDir.Create();
                 Console.ReadKey();
                 return;
             }
-
-            // Read all of the files and parse each line into a message object.
-            //   Dates from the file names are combined with the inline timestamp to establish context.
-            //   Invalid lines and other junk are not parsed.
 
             // Strings to indicate that a file should not be processed.
             string[] doNotProcess = new string[4] { "WHISPERS", "PACKETLOG", "master", "commands" };
@@ -36,6 +33,8 @@ namespace SBLogAnalyzer
             List<LogMessage> messages = new List<LogMessage>();
             StringComparison sComp = StringComparison.OrdinalIgnoreCase;
             StringComparer comparer = StringComparer.OrdinalIgnoreCase;
+
+            #region File Processing
 
             // Number of files, lines, and bytes.
             int fileCount = 0, totalLines = 0;
@@ -59,9 +58,7 @@ namespace SBLogAnalyzer
                 }
 
                 totalSize += fileSize;
-                Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));
-
-                #region File Processing
+                Console.Write("Processing file: {0} [{1} KB] ...", file.Name, (fileSize / 1000));              
 
                 int lineNumber = 0;
                 fileCount++;
@@ -138,17 +135,18 @@ namespace SBLogAnalyzer
                         }
                     }
                 }
-                #endregion
+                
 
                 Console.WriteLine("... {0} lines.", lineNumber);
             }
+
+            #endregion
 
             // Put all of the resulting messages into a list ordered from earliest to latest.
             messages = messages.OrderBy(m => m.Time).ToList();
 
             Console.WriteLine("Processing complete.");
             Console.WriteLine();
-
             
             Console.WriteLine("        Files: {0}", fileCount);
             Console.WriteLine("  Total Lines: {0}", totalLines);
@@ -167,6 +165,8 @@ namespace SBLogAnalyzer
             Console.WriteLine("Beginning analysis ...");
 
             // Go through all the messages and figure out what channels they are from, if any.
+            #region Channel Linking
+
             string lastChannel = String.Empty;
             string unknownChannel = "## Unknown Channel ##";
             foreach (LogMessage message in messages)
@@ -196,6 +196,8 @@ namespace SBLogAnalyzer
                 }
             }
 
+            #endregion
+
             // Get some sub-enums
             var chat = messages.Where(m => m is UserTalkMessage).Select(m => (UserTalkMessage)m); ;
             var joins = messages.Where(m => m is JoinLeaveMessage).Select(m => (JoinLeaveMessage)m); ;
@@ -208,76 +210,45 @@ namespace SBLogAnalyzer
             Console.WriteLine(" - {0} operator actions", removals.Count());
             Console.WriteLine();
 
-            int position = 0;
-            Console.WriteLine("Most joined channels: ");
-            foreach (var res in channels.Select(c => c.Channel).GroupBy(s => s, comparer).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
+            // this function orders the elements by number of occurrences
+            Func<IEnumerable<string>, IOrderedEnumerable<Tuple<string, int>>> OrderByCount = (e) => e.GroupBy(s => s, comparer).Select(g => new Tuple<string, int>(g.Key, g.Count())).OrderByDescending(r => r.Item2);
+
+            // Get the leaderboards
+            var mostJoined = OrderByCount(channels.Select(c => c.Channel));
+            var activeChannels = OrderByCount(chat.Select(c => c.Channel));
+            var activeUsers = OrderByCount(chat.Select(c => c.Username));
+            var mostKicked = OrderByCount(removals.Where(r => r.Type == EventType.Kick).Select(c => c.Username));
+            var mostBanned = OrderByCount(removals.Where(r => r.Type == EventType.Ban).Select(c => c.Username));
+            var activeOps = OrderByCount(removals.Select(c => c.KickedBy));
+
+            #region Leaderboards
+
+            // this function shows the first X elements
+            #region ShowLeaders() function
+            Action<string, IOrderedEnumerable<Tuple<string, int>>, int> ShowLeaders = (title, items, count) =>
             {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
+                int position = 0;
+                Console.WriteLine(title + ": ");
+                foreach (var item in items)
+                {
+                    position++;
+                    Console.WriteLine(" - #{0} -> {1}: {2}", position, item.Item1, item.Item2);
 
-                if (position == 10)
-                    break;
-            }
-            Console.WriteLine();
+                    if (position == 10)
+                        break;
+                }
+                Console.WriteLine();
+            };
+            #endregion
 
-            position = 0;
-            Console.WriteLine("Most active channels: ");
-            foreach (var res in chat.Select(c => c.Channel).GroupBy(s => s, comparer).Select(g => new { Name = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
-            {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.Name, res.Count);
+            ShowLeaders("Most joined channels", mostJoined, 10);
+            ShowLeaders("Most active channels", activeChannels, 10);
+            ShowLeaders("Most active users", activeUsers, 10);
+            ShowLeaders("Most kicked users", mostKicked, 10);
+            ShowLeaders("Most banned users", mostBanned, 10);
+            ShowLeaders("Most active operators", activeOps, 10);
 
-                if (position == 10)
-                    break;
-            }
-            Console.WriteLine();
-
-            position = 0;
-            Console.WriteLine("Most active users: ");
-            foreach (var res in chat.Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
-            {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
-
-                if (position == 10)
-                    break;
-            }
-            Console.WriteLine();
-
-            position = 0;
-            Console.WriteLine("Most kicked users: ");
-            foreach (var res in removals.Where(r => r.Type == EventType.Kick).Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
-            {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
-
-                if (position == 10)
-                    break;
-            }
-            Console.WriteLine();
-
-            position = 0;
-            Console.WriteLine("Most banned users: ");
-            foreach (var res in removals.Where(r => r.Type == EventType.Ban).Select(c => c.Username).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
-            {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
-
-                if (position == 10)
-                    break;
-            }
-            Console.WriteLine();
-
-            position = 0;
-            Console.WriteLine("Most active operators: ");
-            foreach (var res in removals.Select(c => c.KickedBy).GroupBy(s => s, comparer).Select(g => new { User = g.Key, Count = g.Count() }).OrderByDescending(r => r.Count))
-            {
-                position++;
-                Console.WriteLine(" - #{0} -> {1}: {2}", position, res.User, res.Count);
-
-                if (position == 10)
-                    break;
-            }
+            #endregion
 
             Console.WriteLine("Work complete!");
             Console.ReadKey();
