@@ -15,28 +15,21 @@ namespace SBLogAnalyzer.Data
 
         public ChannelJoinMessage()
         {
-            ChannelName = String.Empty;
-            IsClanChannel = false;
+            IsClan = false;
         }
 
         private ChannelJoinMessage(LogMessage msg) : this()
         {
-            Timestamp = msg.Timestamp;
-            Content = msg.Content;
-            Time = msg.Time;
+            msg.CopyTo(this);
+
+            IsClan = Channel.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
         }
 
         #endregion
 
         #region Properties
 
-        public string ChannelName
-        {
-            get;
-            protected set;
-        }
-
-        public bool IsClanChannel
+        public bool IsClan
         {
             get;
             protected set;
@@ -56,10 +49,10 @@ namespace SBLogAnalyzer.Data
             ChannelJoinMessage msg = new ChannelJoinMessage(message);
             if (msg.Content.StartsWith(JoinedChannel))
             {
-                msg.ChannelName = msg.Content.Substring(JoinedChannel.Length);
-                msg.ChannelName = msg.ChannelName.Substring(0, msg.ChannelName.Length - 3);
+                msg.Channel = msg.Content.Substring(JoinedChannel.Length);
+                msg.Channel = msg.Channel.Substring(0, msg.Channel.Length - 3);
 
-                msg.IsClanChannel = msg.ChannelName.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
+                msg.IsClan = msg.Channel.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
             }
             else
                 throw InvalidFormatException;

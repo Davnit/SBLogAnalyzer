@@ -20,6 +20,9 @@ namespace SBLogAnalyzer.Data
         {
             Timestamp = String.Empty;
             Content = String.Empty;
+            Time = DateTime.Now;
+
+            Channel = String.Empty;
         }
 
         #endregion
@@ -44,6 +47,12 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        public string Channel
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         public void SetDate(DateTime date)
@@ -54,6 +63,15 @@ namespace SBLogAnalyzer.Data
         public void SetTime(DateTime time)
         {
             Time = new DateTime(Time.Year, Time.Month, Time.Day, time.Hour, time.Minute, time.Second, time.Millisecond, DateTimeKind.Local);
+        }
+
+        public virtual void CopyTo(LogMessage dest)
+        {
+            dest.Timestamp = Timestamp;
+            dest.Content = Content;
+            dest.Time = Time;
+
+            dest.Channel = Channel;
         }
 
         public override string ToString()

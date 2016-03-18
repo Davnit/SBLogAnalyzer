@@ -23,9 +23,7 @@ namespace SBLogAnalyzer.Data
 
         private UserTalkMessage(LogMessage msg) : this()
         {
-            Timestamp = msg.Timestamp;
-            Content = msg.Content;
-            Time = msg.Time;
+            msg.CopyTo(this);
         }
 
         #endregion

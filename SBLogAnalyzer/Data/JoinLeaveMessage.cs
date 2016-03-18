@@ -22,9 +22,7 @@ namespace SBLogAnalyzer.Data
 
         private JoinLeaveMessage(LogMessage msg) : this()
         {
-            Timestamp = msg.Timestamp;
-            Content = msg.Content;
-            Time = msg.Time;
+            msg.CopyTo(this);
         }
 
         #endregion
