@@ -218,11 +218,17 @@ namespace SBLogAnalyzer
 
             var clanMembers = messages.Where(m => m is ClanMemberJoin).Select(m => (ClanMemberJoin)m);
 
+            string blizzPostfix = "@Blizzard";
+            var blizzReps = chat.Where(m => m.Username.EndsWith(blizzPostfix)).Select(m => new Tuple<string, LogMessage>(m.Username, m));
+            blizzReps = blizzReps.Concat(joins.Where(m => m.Username.EndsWith(blizzPostfix)).Select(m => new Tuple<string, LogMessage>(m.Username, m)));
+            blizzReps = blizzReps.Concat(removals.Where(m => m.KickedBy.EndsWith(blizzPostfix)).Select(m => new Tuple<string, LogMessage>(m.KickedBy, m)));
+
             Console.WriteLine(" - {0} chat messages", chat.Count());
             Console.WriteLine(" - {0} channels", channels.Select(m => m.Channel).Distinct(comparer).Count());
             Console.WriteLine(" - {0} unique users", chat.Select(m => m.Username).Concat(joins.Select(m => m.Username)).Distinct(comparer).Count());
             Console.WriteLine(" - {0} operator actions", removals.Count());
             Console.WriteLine(" - {0} clan members from {1} clans", clanMembers.Select(m => m.Username).Distinct(comparer).Count(), clanMembers.Select(m => m.ClanTag).Distinct(comparer).Count());
+            Console.WriteLine(" - {0} blizzard employees seen {1} times", blizzReps.Select(r => r.Item1).Distinct(comparer).Count(), blizzReps.Count());
             Console.WriteLine();
 
             // this function orders the elements by number of occurrences
@@ -282,7 +288,10 @@ namespace SBLogAnalyzer
 
             // Write list of all clan tags found and when they were first seen
             writer.WriteFile("ClanTags.txt", clanMembers.GroupBy(m => m.ClanTag, comparer).Select(m => m.First()),
-                m => String.Format("{0} -> {1} on {2} in '{3}'.", m.ClanTag, m.Username, m.Time.ToString("MMM d, yyyy"), m.Channel));
+                m => String.Format("{0} -> {1} on {2} in '{3}'.", m.ClanTag, m.Username.Split('@')[0], m.Time.ToString("MMM d, yyyy"), m.Channel));
+
+            // What has Blizzard been up to?
+            writer.WriteFile("BlizzardEmployees.txt", blizzReps, r => String.Format("[{0}] {1} >> {2}", r.Item2.Time, r.Item1, r.Item2.Content));
 
             // Output leaderboards
             Console.WriteLine("Writing leaderboards...");
@@ -326,7 +335,7 @@ namespace SBLogAnalyzer
                     string tag = channelName.Split(LogMessage.WordSeparator)[1];
                     var localMembers = clanMembers.Where(c => c.ClanTag.Equals(tag, sComp)).GroupBy(m => m.Username, comparer).Select(m => m.Last());
 
-                    writer.WriteFile("Members.txt", localMembers, m => String.Format("{0} -> {1}", m.Username, m.Time));
+                    writer.WriteFile("Members.txt", localMembers, m => String.Format("{0} -> {1} in {2}", m.Username.Split('@')[0], m.Time, m.Channel));
                 }
 
                 // Write a separate log file for each date (same as source format)
