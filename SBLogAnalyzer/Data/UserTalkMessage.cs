@@ -53,7 +53,9 @@ namespace SBLogAnalyzer.Data
         public override string ToString()
         {
             bool isEmote = (Type == EventType.UserEmote);
-            return String.Concat(Timestamp, WordSeparator, UserStart, Username, isEmote ? Content : UserEnd, isEmote ? UserEnd : Content);
+            return String.Concat(Timestamp, WordSeparator, UserStart, Username, 
+                isEmote ? WordSeparator + Content : UserEnd, 
+                isEmote ? UserEnd + WordSeparator : Content);
         }
 
         #region Static Methods
