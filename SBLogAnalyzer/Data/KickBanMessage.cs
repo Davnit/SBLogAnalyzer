@@ -57,6 +57,21 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        public bool IsKick
+        {
+            get { return Type == EventType.Kick; }
+        }
+
+        public bool IsBan
+        {
+            get { return Type == EventType.Ban; }
+        }
+
+        public bool ReasonGiven
+        {
+            get { return Reason.Length > 0; }
+        }
+
         #endregion
 
         public virtual void CopyTo(KickBanMessage dest)
@@ -93,30 +108,39 @@ namespace SBLogAnalyzer.Data
             KickBanMessage msg = new KickBanMessage(message);
             msg.Username = msg.Content.Substring(0, msg.Content.IndexOf(WordSeparator));
 
+            // What type of action, kick or ban?
             string rest = msg.Content.Substring(msg.Username.Length);
-
-            // function to evaluate properties based on message and indicator
-            Action<string, string> p = (s, indicator) =>
+            if (rest.StartsWith(KickIndicator))
             {
-                msg.KickedBy = s.Substring(indicator.Length).Split(new string[1] { ReasonStart }, StringSplitOptions.None)[0];
-
-                msg.Reason = s.Substring(indicator.Length + msg.KickedBy.Length + ReasonStart.Length);
-                if (msg.Reason.EndsWith(ReasonEnd))
-                    msg.Reason = msg.Reason.Substring(0, msg.Reason.Length - ReasonEnd.Length);
-            };
-
-            if (rest.StartsWith(KickIndicator))         // it's a kick
-            {
-                p(rest, KickIndicator);
+                rest = rest.Substring(KickIndicator.Length);
                 msg.Type = EventType.Kick;
             }
-            else if (rest.StartsWith(BanIndicator))     // it's a ban
+            else if (rest.StartsWith(BanIndicator))
             {
-                p(rest, BanIndicator);
+                rest = rest.Substring(BanIndicator.Length);
                 msg.Type = EventType.Ban;
             }
+
+            // who is responsible?
+            msg.KickedBy = rest.Split(WordSeparator)[0];
+            if (rest.Length == msg.KickedBy.Length)
+                msg.KickedBy = msg.KickedBy.Substring(0, msg.KickedBy.Length - 1);
             else
-                throw InvalidFormatException;
+            {
+                // why did they do it?
+                rest = rest.Substring(msg.KickedBy.Length);
+                if (rest.StartsWith(ReasonStart))
+                {
+                    msg.Reason = rest.Substring(ReasonStart.Length);
+
+                    // Remove the trailing bits if they are there.
+                    foreach (char c in ReasonEnd)
+                    {
+                        if (msg.Reason.EndsWith(c.ToString()))
+                            msg.Reason = msg.Reason.Substring(0, msg.Reason.Length - 1);
+                    }
+                }
+            }
 
             return msg;
         }
