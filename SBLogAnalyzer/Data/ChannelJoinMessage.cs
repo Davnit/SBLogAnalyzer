@@ -32,8 +32,7 @@ namespace SBLogAnalyzer.Data
 
         public bool IsClan
         {
-            get;
-            protected set;
+            get { return IsClanChannel(Channel); }
         }
 
         #endregion
@@ -41,8 +40,6 @@ namespace SBLogAnalyzer.Data
         public virtual void CopyTo(ChannelJoinMessage dest)
         {
             base.CopyTo(dest);
-
-            dest.IsClan = IsClan;
         }
 
         public override string ToString()
@@ -70,8 +67,6 @@ namespace SBLogAnalyzer.Data
             {
                 msg.Channel = msg.Content.Substring(JoinedChannel.Length);
                 msg.Channel = msg.Channel.Substring(0, msg.Channel.Length - ChannelPostfix.Length);
-
-                msg.IsClan = msg.Channel.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
             }
             else
                 throw InvalidFormatException;
