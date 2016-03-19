@@ -134,7 +134,7 @@ namespace SBLogAnalyzer.Data
                     msg.Reason = rest.Substring(ReasonStart.Length);
 
                     // Remove the trailing bits if they are there.
-                    foreach (char c in ReasonEnd)
+                    foreach (char c in ReasonEnd.Reverse())
                     {
                         if (msg.Reason.EndsWith(c.ToString()))
                             msg.Reason = msg.Reason.Substring(0, msg.Reason.Length - 1);
