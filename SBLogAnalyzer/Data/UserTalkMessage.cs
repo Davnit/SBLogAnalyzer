@@ -48,6 +48,11 @@ namespace SBLogAnalyzer.Data
             protected set;
         }
 
+        public bool IsEmote
+        {
+            get { return Type == EventType.UserEmote; }
+        }
+
         #endregion
 
         public virtual void CopyTo(UserTalkMessage dest)
@@ -64,7 +69,7 @@ namespace SBLogAnalyzer.Data
             bool isEmote = (Type == EventType.UserEmote);
             return String.Concat(Timestamp, WordSeparator, UserStart, Username, 
                 isEmote ? WordSeparator + Content : UserEnd, 
-                isEmote ? UserEnd + WordSeparator : Content);
+                isEmote ? UserEnd : WordSeparator + Content);
         }
 
         #region Static Methods
@@ -132,11 +137,11 @@ namespace SBLogAnalyzer.Data
             string content = message.Content.Trim();
             if (content.Length == 0) return false;
 
-            // There is a problem here if D2 naming conventions are turned on.
-            //   I'm not quite sure what to do about that, but I don't think the actual
-            //   parsing methods handle it either, so I'm going to ignore it for now.
-            return (content.StartsWith(UserStart) && content.Contains(UserEnd) &&
-                (content.IndexOf(UserEnd) < content.IndexOf(WordSeparator))) ;
+            string[] parts = content.Split(WordSeparator);
+            bool hasUserStart = parts[0].StartsWith(UserStart);
+
+            return (hasUserStart && parts[0].EndsWith(UserStart) ||
+                hasUserStart && parts.Last().EndsWith(UserEnd));
         }
 
         #endregion
