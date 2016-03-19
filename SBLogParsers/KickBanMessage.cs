@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SBLogAnalyzer.Data
+namespace SBLogParsers
 {
     public class KickBanMessage : LogMessage
     {

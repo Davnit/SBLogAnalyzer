@@ -1,10 +1,11 @@
-﻿using SBLogAnalyzer.Data;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using SBLogParsers;
 
 namespace SBLogAnalyzer
 {

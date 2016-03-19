@@ -4,17 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D1BE0F62-2349-498E-B34C-5D51B0858390}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{BA729874-12CC-4B59-BE39-34C7805E15D0}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SBLogAnalyzer</RootNamespace>
-    <AssemblyName>SBLogAnalyzer</AssemblyName>
+    <RootNamespace>SBLogParsers</RootNamespace>
+    <AssemblyName>SBLogParsers</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -43,23 +40,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChannelStats.cs" />
-    <Compile Include="CollectionWriter.cs" />
-    <Compile Include="MessageType.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="ChannelJoinMessage.cs" />
+    <Compile Include="ClanMemberJoin.cs" />
+    <Compile Include="EventType.cs" />
+    <Compile Include="JoinLeaveMessage.cs" />
+    <Compile Include="KickBanMessage.cs" />
+    <Compile Include="LogMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StringExtension.cs" />
+    <Compile Include="TaggedMessage.cs" />
+    <Compile Include="UserTalkMessage.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\SBLogParsers\SBLogParsers.csproj">
-      <Project>{ba729874-12cc-4b59-be39-34c7805e15d0}</Project>
-      <Name>SBLogParsers</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
