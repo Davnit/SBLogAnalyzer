@@ -69,6 +69,14 @@ namespace SBLogAnalyzer.Data
             dest.Type = Type;
         }
 
+        public override string ToString()
+        {
+            bool isBan = (Type == EventType.Ban);
+            return String.Concat(Timestamp, WordSeparator, Username,
+                isBan ? BanIndicator : KickIndicator,
+                KickedBy, ReasonStart, Reason, ReasonEnd);
+        }
+
         #region Static Methods
 
         public static new KickBanMessage Parse(string line)

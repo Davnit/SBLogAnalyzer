@@ -45,6 +45,11 @@ namespace SBLogAnalyzer.Data
             dest.IsClan = IsClan;
         }
 
+        public override string ToString()
+        {
+            return String.Concat(Timestamp, WordSeparator, JoinedChannel, Channel, ChannelPostfix);
+        }
+
         #region Static Methods
 
         public static bool IsClanChannel(string channelName)
