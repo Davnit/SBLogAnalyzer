@@ -10,7 +10,7 @@ namespace SBLogAnalyzer.Data
     {
         public const string JoinedChannel = "-- Joined channel: ";
         public const string ChannelPostfix = " --";
-        public const string ClanPrefix = "clan";
+        public const string ClanPrefix = "clan ";
 
         #region Constructors
 
@@ -23,7 +23,7 @@ namespace SBLogAnalyzer.Data
         {
             msg.CopyTo(this);
 
-            IsClan = Channel.StartsWith(ClanPrefix, StringComparison.OrdinalIgnoreCase);
+            IsClan = IsClanChannel(Channel);
         }
 
         #endregion
@@ -39,6 +39,12 @@ namespace SBLogAnalyzer.Data
         #endregion
 
         #region Static Methods
+
+        public static bool IsClanChannel(string channelName)
+        {
+            StringComparison comp = StringComparison.OrdinalIgnoreCase;
+            return channelName.StartsWith(ClanPrefix, comp) && !channelName.EndsWith("recruitment", comp);
+        }
 
         public static new ChannelJoinMessage Parse(string line)
         {
