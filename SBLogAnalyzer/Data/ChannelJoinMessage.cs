@@ -16,14 +16,12 @@ namespace SBLogAnalyzer.Data
 
         public ChannelJoinMessage()
         {
-            IsClan = false;
+            
         }
 
         private ChannelJoinMessage(LogMessage msg) : this()
         {
             msg.CopyTo(this);
-
-            IsClan = IsClanChannel(Channel);
         }
 
         #endregion
