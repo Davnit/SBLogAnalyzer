@@ -105,7 +105,16 @@ namespace SBLogAnalyzer
                                 {
                                     JoinLeaveMessage jlm;
                                     if (JoinLeaveMessage.TryParse(msg, out jlm))
+                                    {
                                         msg = jlm;
+
+                                        if (ClanMemberJoin.QuickCheck(jlm))
+                                        {
+                                            ClanMemberJoin cmj;
+                                            if (ClanMemberJoin.TryParse(jlm, out cmj))
+                                                msg = cmj;
+                                        }
+                                    }
                                 }
                                 else if (UserTalkMessage.QuickCheck(msg))
                                 {
@@ -207,10 +216,13 @@ namespace SBLogAnalyzer
             var channels = messages.Where(m => m is ChannelJoinMessage).Select(m => (ChannelJoinMessage)m);
             var removals = messages.Where(m => m is KickBanMessage).Select(m => (KickBanMessage)m);
 
+            var clanMembers = messages.Where(m => m is ClanMemberJoin).Select(m => (ClanMemberJoin)m);
+
             Console.WriteLine(" - {0} chat messages", chat.Count());
             Console.WriteLine(" - {0} channels", channels.Select(m => m.Channel).Distinct(comparer).Count());
             Console.WriteLine(" - {0} unique users", chat.Select(m => m.Username).Concat(joins.Select(m => m.Username)).Distinct(comparer).Count());
             Console.WriteLine(" - {0} operator actions", removals.Count());
+            Console.WriteLine(" - {0} clan members from {1} clans", clanMembers.Select(m => m.Username).Distinct(comparer).Count(), clanMembers.Select(m => m.ClanTag).Distinct(comparer).Count());
             Console.WriteLine();
 
             // this function orders the elements by number of occurrences
@@ -223,6 +235,7 @@ namespace SBLogAnalyzer
             var mostKicked = OrderByCount(removals.Where(r => r.Type == EventType.Kick).Select(c => c.Username));
             var mostBanned = OrderByCount(removals.Where(r => r.Type == EventType.Ban).Select(c => c.Username));
             var activeOps = OrderByCount(removals.Select(c => c.KickedBy));
+            var mostCommonClans = OrderByCount(clanMembers.Select(c => c.ClanTag));
 
             #region Leaderboards
 
@@ -250,6 +263,7 @@ namespace SBLogAnalyzer
             ShowLeaders("Most kicked users", mostKicked, 10);
             ShowLeaders("Most banned users", mostBanned, 10);
             ShowLeaders("Most active operators", activeOps, 10);
+            ShowLeaders("Most common clan tags", mostCommonClans, 10);
 
             #endregion
 
@@ -266,6 +280,10 @@ namespace SBLogAnalyzer
             Console.WriteLine("Writing master file...");
             writer.WriteFile("Master.txt", messages, m => m.ToString());
 
+            // Write list of all clan tags found and when they were first seen
+            writer.WriteFile("ClanTags.txt", clanMembers.GroupBy(m => m.ClanTag, comparer).Select(m => m.First()),
+                m => String.Format("{0} -> {1} on {2} in '{3}'.", m.ClanTag, m.Username, m.Time.ToString("MMM d, yyyy"), m.Channel));
+
             // Output leaderboards
             Console.WriteLine("Writing leaderboards...");
 
@@ -280,24 +298,36 @@ namespace SBLogAnalyzer
             WriteCounts("ActiveChannels.txt", activeChannels);
             WriteCounts("ActiveUsers.txt", activeUsers);
             WriteCounts("ActiveOperators.txt", activeOps);
+            WriteCounts("MostPopularClans.txt", mostCommonClans);
 
             // Output per-channel logs
             Console.WriteLine("Writing individual channel logs...");
             foreach (var channel in activeChannels)
             {
+                string channelName = channel.Item1;
+
                 writer.CurrentDirectory = "Output\\Channels";
-                writer.CurrentDirectory = Path.Combine(writer.CurrentDirectory, channel.Item1);
-                Console.WriteLine(" - {0}", channel.Item1);
+                writer.CurrentDirectory = Path.Combine(writer.CurrentDirectory, channelName);
+                Console.WriteLine(" - {0}", channelName);
 
                 // Get a collection of messages from this channel
-                var channelMessages = messages.Where(m => m.Channel.Equals(channel.Item1, sComp));
+                var channelMessages = messages.Where(m => m.Channel.Equals(channelName, sComp));
 
                 // Sub collections
-                var channelJoins = joins.Where(m => m.Channel.Equals(channel.Item1, sComp));
-                var channelChat = chat.Where(m => m.Channel.Equals(channel.Item1, sComp));
+                var channelJoins = joins.Where(m => m.Channel.Equals(channelName, sComp));
+                var channelChat = chat.Where(m => m.Channel.Equals(channelName, sComp));
 
                 // Write a list of users seen in this channel
                 writer.WriteFile("Users.txt", channelJoins.Select(j => j.Username).Concat(channelChat.Select(c => c.Username)).Distinct(comparer), m => m);
+
+                // Is it a clan? If so, who have we seen that's a member?
+                if (ChannelJoinMessage.IsClanChannel(channel.Item1))
+                {
+                    string tag = channelName.Split(LogMessage.WordSeparator)[1];
+                    var localMembers = clanMembers.Where(c => c.ClanTag.Equals(tag, sComp)).GroupBy(m => m.Username, comparer).Select(m => m.Last());
+
+                    writer.WriteFile("Members.txt", localMembers, m => String.Format("{0} -> {1}", m.Username, m.Time));
+                }
 
                 // Write a separate log file for each date (same as source format)
                 foreach (var date in channelMessages.Select(m => m.Time.Date).Distinct())
