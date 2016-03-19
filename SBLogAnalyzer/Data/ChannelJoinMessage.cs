@@ -38,6 +38,13 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
+        public virtual void CopyTo(ChannelJoinMessage dest)
+        {
+            base.CopyTo(dest);
+
+            dest.IsClan = IsClan;
+        }
+
         #region Static Methods
 
         public static bool IsClanChannel(string channelName)

@@ -41,6 +41,14 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
+        public virtual void CopyTo(TaggedMessage dest)
+        {
+            base.CopyTo(dest);
+
+            dest.Tag = Tag;
+            dest.Content = Content;
+        }
+
         public override string ToString()
         {
             return String.Concat(Timestamp, WordSeparator, TagStart, Tag, TagEnd, WordSeparator, Content);

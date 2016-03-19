@@ -59,9 +59,14 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
-        public override string ToString()
+        public virtual void CopyTo(KickBanMessage dest)
         {
-            return base.ToString();
+            base.CopyTo(dest);
+
+            dest.KickedBy = KickedBy;
+            dest.Username = Username;
+            dest.Reason = Reason;
+            dest.Type = Type;
         }
 
         #region Static Methods

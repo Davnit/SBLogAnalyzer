@@ -35,6 +35,13 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
+        public virtual void CopyTo(ClanMemberJoin dest)
+        {
+            base.CopyTo(dest);
+
+            dest.ClanTag = ClanTag;
+        }
+
         #region Static Methods
 
         public static new ClanMemberJoin Parse(string line)

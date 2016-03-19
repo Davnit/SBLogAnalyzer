@@ -50,6 +50,15 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
+        public virtual void CopyTo(UserTalkMessage dest)
+        {
+            base.CopyTo(dest);
+
+            dest.Username = Username;
+            dest.Type = Type;
+            dest.Content = Content;
+        }
+
         public override string ToString()
         {
             bool isEmote = (Type == EventType.UserEmote);

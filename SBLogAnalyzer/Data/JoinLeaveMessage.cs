@@ -43,6 +43,14 @@ namespace SBLogAnalyzer.Data
 
         #endregion
 
+        public virtual void CopyTo(JoinLeaveMessage dest)
+        {
+            base.CopyTo(dest);
+
+            dest.Username = Username;
+            dest.Type = Type;
+        }
+
         public override string ToString()
         {
             return String.Concat(Timestamp, WordSeparator, EventMessagePrefix, WordSeparator, Content);
