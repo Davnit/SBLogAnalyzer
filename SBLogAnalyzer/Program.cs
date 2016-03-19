@@ -144,8 +144,7 @@ namespace SBLogAnalyzer
 
             // Put all of the resulting messages into a list ordered from earliest to latest.
             messages = messages.OrderBy(m => m.Time).ToList();
-
-            Console.WriteLine("Processing complete.");
+            
             Console.WriteLine();
             
             Console.WriteLine("        Files: {0}", fileCount);
@@ -157,6 +156,10 @@ namespace SBLogAnalyzer
             Console.WriteLine("    Messages: {0}", messages.Count);
             Console.WriteLine("   Time Span: {0:n0} days", (messages.Last().Time - messages.First().Time).TotalDays);
 
+            Console.WriteLine();
+
+            Console.Write("Processing complete. Press enter to begin analysis. ");
+            Console.ReadLine();
             Console.WriteLine();
 
             // Now that all of the files have been read and parsed, look at them a little more closely.
@@ -250,8 +253,62 @@ namespace SBLogAnalyzer
 
             #endregion
 
+            Console.Write("Analysis complete. Press enter to begin writing output. ");
+            Console.ReadLine();
+            Console.WriteLine();
+
+            Console.WriteLine("Writing data to output... this could take a while.");
+
+            // Create writer for the output directory
+            CollectionWriter writer = new CollectionWriter("Output");
+
+            // Write the master output file (this will be big)
+            Console.WriteLine("Writing master file...");
+            writer.WriteFile("Master.txt", messages, m => m.ToString());
+
+            // Output leaderboards
+            Console.WriteLine("Writing leaderboards...");
+
+            #region WriteCounts() method
+            Action<string, IOrderedEnumerable<Tuple<string, int>>> WriteCounts = (fileName, items) =>
+            {
+                writer.WriteFileWithPosition(fileName, items, item => String.Format("#%POSITION% -> {0}: {1}", item.Item1, item.Item2));
+            };
+            #endregion
+
+            WriteCounts("JoinedChannels.txt", mostJoined);
+            WriteCounts("ActiveChannels.txt", activeChannels);
+            WriteCounts("ActiveUsers.txt", activeUsers);
+            WriteCounts("ActiveOperators.txt", activeOps);
+
+            // Output per-channel logs
+            Console.WriteLine("Writing individual channel logs...");
+            foreach (var channel in activeChannels)
+            {
+                writer.CurrentDirectory = "Output\\Channels";
+                writer.CurrentDirectory = Path.Combine(writer.CurrentDirectory, channel.Item1);
+                Console.WriteLine(" - {0}", channel.Item1);
+
+                // Get a collection of messages from this channel
+                var channelMessages = messages.Where(m => m.Channel.Equals(channel.Item1, sComp));
+
+                // Sub collections
+                var channelJoins = joins.Where(m => m.Channel.Equals(channel.Item1, sComp));
+                var channelChat = chat.Where(m => m.Channel.Equals(channel.Item1, sComp));
+
+                // Write a list of users seen in this channel
+                writer.WriteFile("Users.txt", channelJoins.Select(j => j.Username).Concat(channelChat.Select(c => c.Username)).Distinct(comparer), m => m);
+
+                // Write a separate log file for each date (same as source format)
+                foreach (var date in channelMessages.Select(m => m.Time.Date).Distinct())
+                {
+                    string fileName = date.ToString("yyyy-MM-dd") + ".txt";
+                    writer.WriteFile(fileName, channelMessages.Where(m => m.Time.Date.Equals(date)), m => m.ToString());
+                }
+            }
+
             Console.WriteLine("Work complete!");
-            Console.ReadKey();
+            Console.ReadLine();
         }
     }
 }
