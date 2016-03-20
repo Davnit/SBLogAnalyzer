@@ -17,10 +17,10 @@ namespace SBLogParsers
         public UserTalkMessage()
         {
             Username = String.Empty;
-            Type = EventType.None;
+            EventType = EventType.None;
             Content = String.Empty;
 
-            MessageType = MessageType.Chat;
+            Type = MessageType.Chat;
         }
 
         private UserTalkMessage(LogMessage msg) : this()
@@ -38,7 +38,7 @@ namespace SBLogParsers
             protected set;
         }
 
-        public EventType Type
+        public EventType EventType
         {
             get;
             protected set;
@@ -52,7 +52,7 @@ namespace SBLogParsers
 
         public bool IsEmote
         {
-            get { return Type == EventType.UserEmote; }
+            get { return EventType == EventType.UserEmote; }
         }
 
         #endregion
@@ -62,13 +62,13 @@ namespace SBLogParsers
             base.CopyTo(dest);
 
             dest.Username = Username;
-            dest.Type = Type;
+            dest.EventType = EventType;
             dest.Content = Content;
         }
 
         public override string ToString()
         {
-            bool isEmote = (Type == EventType.UserEmote);
+            bool isEmote = (EventType == EventType.UserEmote);
             return String.Concat(Timestamp, WordSeparator, UserStart, Username, 
                 isEmote ? WordSeparator + Content : UserEnd, 
                 isEmote ? UserEnd : WordSeparator + Content);
@@ -88,14 +88,14 @@ namespace SBLogParsers
 
             if (parts[0].StartsWith(UserStart) && parts[0].EndsWith(UserEnd))
             {
-                msg.Type = EventType.UserTalk;
+                msg.EventType = EventType.UserTalk;
                 msg.Username = parts[0].Substring(UserStart.Length);
                 msg.Username = msg.Username.Substring(0, parts[0].Length - (UserStart.Length + UserEnd.Length));
                 msg.Content = msg.Content.Substring(parts[0].Length + 1);
             }
             else if (parts[0].StartsWith(UserStart) && msg.Content.EndsWith(UserEnd))
             {
-                msg.Type = EventType.UserEmote;
+                msg.EventType = EventType.UserEmote;
                 msg.Username = parts[0].Substring(1);
                 msg.Content = msg.Content.Substring(parts[0].Length + 1);
                 msg.Content = msg.Content.Substring(0, msg.Content.Length - UserEnd.Length);

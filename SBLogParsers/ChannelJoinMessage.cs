@@ -16,7 +16,7 @@ namespace SBLogParsers
 
         public ChannelJoinMessage()
         {
-            MessageType = MessageType.ChannelJoin;
+            Type = MessageType.ChannelJoin;
         }
 
         private ChannelJoinMessage(LogMessage msg) : this()

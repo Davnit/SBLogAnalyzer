@@ -17,8 +17,8 @@ namespace SBLogParsers
         public JoinLeaveMessage()
         {
             Username = String.Empty;
-            Type = EventType.None;
-            MessageType = MessageType.JoinLeave;
+            EventType = EventType.None;
+            Type = MessageType.JoinLeave;
         }
 
         private JoinLeaveMessage(LogMessage msg) : this()
@@ -36,7 +36,7 @@ namespace SBLogParsers
             protected set;
         }
 
-        public EventType Type
+        public EventType EventType
         {
             get;
             protected set;
@@ -49,7 +49,7 @@ namespace SBLogParsers
             base.CopyTo(dest);
 
             dest.Username = Username;
-            dest.Type = Type;
+            dest.EventType = EventType;
         }
 
         public override string ToString()
@@ -72,11 +72,11 @@ namespace SBLogParsers
                 string[] parts = msg.Content.Split(WordSeparator);
 
                 if (msg.Content.Contains(JoinMessageText))
-                    msg.Type = EventType.UserJoin;
+                    msg.EventType = EventType.UserJoin;
                 else if (msg.Content.Contains(LeaveMessageText))
-                    msg.Type = EventType.UserLeft;
+                    msg.EventType = EventType.UserLeft;
 
-                if (msg.Type == EventType.UserJoin || msg.Type == EventType.UserLeft)
+                if (msg.EventType == EventType.UserJoin || msg.EventType == EventType.UserLeft)
                 {
                     msg.Username = parts[1];
                     msg.Content = msg.Content.Substring(EventMessagePrefix.Length + 1);

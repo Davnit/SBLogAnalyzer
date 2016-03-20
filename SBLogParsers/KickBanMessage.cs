@@ -21,9 +21,9 @@ namespace SBLogParsers
             KickedBy = String.Empty;
             Username = String.Empty;
             Reason = String.Empty;
-            Type = EventType.None;
+            EventType = EventType.None;
 
-            MessageType = MessageType.KickBan;
+            Type = MessageType.KickBan;
         }
         
         private KickBanMessage(LogMessage msg) : this()
@@ -53,7 +53,7 @@ namespace SBLogParsers
             protected set;
         }
 
-        public EventType Type
+        public EventType EventType
         {
             get;
             protected set;
@@ -61,12 +61,12 @@ namespace SBLogParsers
 
         public bool IsKick
         {
-            get { return Type == EventType.Kick; }
+            get { return EventType == EventType.Kick; }
         }
 
         public bool IsBan
         {
-            get { return Type == EventType.Ban; }
+            get { return EventType == EventType.Ban; }
         }
 
         public bool ReasonGiven
@@ -83,12 +83,12 @@ namespace SBLogParsers
             dest.KickedBy = KickedBy;
             dest.Username = Username;
             dest.Reason = Reason;
-            dest.Type = Type;
+            dest.EventType = EventType;
         }
 
         public override string ToString()
         {
-            bool isBan = (Type == EventType.Ban);
+            bool isBan = (EventType == EventType.Ban);
             return String.Concat(Timestamp, WordSeparator, Username,
                 isBan ? BanIndicator : KickIndicator,
                 KickedBy, ReasonStart, Reason, ReasonEnd);
@@ -115,12 +115,12 @@ namespace SBLogParsers
             if (rest.StartsWith(KickIndicator))
             {
                 rest = rest.Substring(KickIndicator.Length);
-                msg.Type = EventType.Kick;
+                msg.EventType = EventType.Kick;
             }
             else if (rest.StartsWith(BanIndicator))
             {
                 rest = rest.Substring(BanIndicator.Length);
-                msg.Type = EventType.Ban;
+                msg.EventType = EventType.Ban;
             }
 
             // who is responsible?
