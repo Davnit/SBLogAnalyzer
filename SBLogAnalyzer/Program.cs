@@ -65,7 +65,7 @@ namespace SBLogAnalyzer
                 fileCount++;
 
                 // Get the date from the file name.
-                DateTime fileDate = DateTime.Parse(Path.GetFileNameWithoutExtension(file.Name)).Date;
+                DateTime fileDate = DateTime.Parse(Path.GetFileNameWithoutExtension(file.Name).Split(LogMessage.WordSeparator)[0]).Date;
 
                 // Read the file
                 using (StreamReader reader = file.OpenText())
