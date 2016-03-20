@@ -46,6 +46,7 @@
     <Compile Include="JoinLeaveMessage.cs" />
     <Compile Include="KickBanMessage.cs" />
     <Compile Include="LogMessage.cs" />
+    <Compile Include="MessageType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TaggedMessage.cs" />
     <Compile Include="UserTalkMessage.cs" />
