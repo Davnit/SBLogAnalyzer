@@ -22,6 +22,8 @@ namespace SBLogParsers
             Username = String.Empty;
             Reason = String.Empty;
             Type = EventType.None;
+
+            MessageType = MessageType.KickBan;
         }
         
         private KickBanMessage(LogMessage msg) : this()

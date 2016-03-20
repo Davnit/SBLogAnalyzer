@@ -8,6 +8,7 @@ namespace SBLogParsers
 {
     public enum MessageType
     {
+        Generic,
         Chat,
         Whisper,
         Tagged,

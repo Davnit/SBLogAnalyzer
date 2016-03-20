@@ -24,6 +24,7 @@ namespace SBLogParsers
             Time = DateTime.Now;
 
             Channel = String.Empty;
+            MessageType = MessageType.Generic;
         }
 
         #endregion
@@ -52,6 +53,12 @@ namespace SBLogParsers
         {
             get;
             set;
+        }
+
+        public MessageType MessageType
+        {
+            get;
+            protected set;
         }
 
         #endregion

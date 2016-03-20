@@ -19,6 +19,8 @@ namespace SBLogParsers
             Username = String.Empty;
             Type = EventType.None;
             Content = String.Empty;
+
+            MessageType = MessageType.Chat;
         }
 
         private UserTalkMessage(LogMessage msg) : this()

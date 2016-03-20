@@ -18,6 +18,7 @@ namespace SBLogParsers
         {
             Username = String.Empty;
             Type = EventType.None;
+            MessageType = MessageType.JoinLeave;
         }
 
         private JoinLeaveMessage(LogMessage msg) : this()

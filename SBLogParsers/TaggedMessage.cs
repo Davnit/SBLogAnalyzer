@@ -16,6 +16,8 @@ namespace SBLogParsers
         public TaggedMessage()
         {
             Tag = String.Empty;
+
+            MessageType = MessageType.Tagged;
         }
 
         private TaggedMessage(LogMessage msg) : this()
