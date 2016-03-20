@@ -177,35 +177,92 @@ namespace SBLogAnalyzer
 
             Console.WriteLine("Beginning analysis ...");
 
+            Dictionary<string, ChannelStats> channelStats = new Dictionary<string, ChannelStats>(comparer);
+
             // Go through all the messages and figure out what channels they are from, if any.
             #region Channel Linking
 
-            string lastChannel = String.Empty;
+            string currentChannel = String.Empty;
             string unknownChannel = "## Unknown Channel ##";
+            ChannelStats currentStats = null;
             foreach (LogMessage message in messages)
             {
                 // This indicates a new channel was joined.
                 if (message is ChannelJoinMessage)
-                    lastChannel = message.Channel;
+                {
+                    currentChannel = message.Channel;
 
-                if (message is TaggedMessage)
+                    if (!channelStats.ContainsKey(currentChannel))
+                        channelStats.Add(currentChannel, new ChannelStats(currentChannel));
+
+                    currentStats = channelStats[currentChannel];
+
+                    currentStats.LastJoined = message.Time;
+                    currentStats.TimesJoined++;
+                }
+
+                // Figure out if we've left whatever channel we were in.
+                bool haveLeftChannel = false;
+                if (message.Type == MessageType.Tagged)
                 {
                     // This indicates the bot was disconnected from the server, and by extension the channel.
                     if (((TaggedMessage)message).Tag.Equals("BNCS", sComp) && message.Content.Equals("Disconnected.", sComp))
-                        lastChannel = String.Empty;
+                        haveLeftChannel = true;
                 }
 
                 // This indicates the user disconnected the bot.
                 if (message.Content.Equals("All connections closed.", sComp))
-                    lastChannel = String.Empty;
+                    haveLeftChannel = true;
+
+                #region Statistics Tracking
+
+                if (currentStats != null)
+                {
+                    if (message.Type == MessageType.Chat)
+                    {
+                        currentStats.TotalChatMessages++;
+                        currentStats.WordCount += message.Content.Split(LogMessage.WordSeparator).Count(w => w.Length > 1);
+                    }
+
+                    if (message.Type == MessageType.JoinLeave)
+                    {
+                        switch (((JoinLeaveMessage)message).EventType)
+                        {
+                            case EventType.UserJoin:
+                                currentStats.TotalUserJoins++;
+                                break;
+                            case EventType.UserLeft:
+                                currentStats.TotalUserLeaves++;
+                                break;
+                        }
+                    }
+
+                    if (message.Type == MessageType.KickBan)
+                    {
+                        currentStats.TotalRemoved++;
+                    }
+                }
+
+                #endregion
 
                 // Assign the channel
-                message.Channel = lastChannel;
+                message.Channel = currentChannel;
 
-                if (message is UserTalkMessage || message is JoinLeaveMessage)
+                if (message.Type == MessageType.Chat || message.Type == MessageType.JoinLeave || message.Type == MessageType.KickBan)
                 {
                     if (message.Channel.Length == 0)
                         message.Channel = unknownChannel;
+                }
+
+                if (haveLeftChannel)
+                {
+                    if (currentStats != null)
+                    {
+                        currentStats.TimeInChannel += (message.Time - currentStats.LastJoined).TotalSeconds;
+                        currentStats = null;
+                    }
+
+                    currentChannel = String.Empty;
                 }
             }
 
@@ -239,10 +296,12 @@ namespace SBLogAnalyzer
             var mostJoined = OrderByCount(channels.Select(c => c.Channel));
             var activeChannels = OrderByCount(chat.Select(c => c.Channel));
             var activeUsers = OrderByCount(chat.Select(c => c.Username));
-            var mostKicked = OrderByCount(removals.Where(r => r.Type == EventType.Kick).Select(c => c.Username));
-            var mostBanned = OrderByCount(removals.Where(r => r.Type == EventType.Ban).Select(c => c.Username));
+            var mostKicked = OrderByCount(removals.Where(r => r.EventType == EventType.Kick).Select(c => c.Username));
+            var mostBanned = OrderByCount(removals.Where(r => r.EventType == EventType.Ban).Select(c => c.Username));
             var activeOps = OrderByCount(removals.Select(c => c.KickedBy));
             var mostCommonClans = OrderByCount(clanMembers.Select(c => c.ClanTag));
+
+            var channelsByTimeSpent = channelStats.Select(c => new Tuple<string, int>(c.Key, (int)c.Value.TimeInChannel)).OrderByDescending(x => x.Item2);
 
             #region Leaderboards
 
@@ -271,6 +330,7 @@ namespace SBLogAnalyzer
             ShowLeaders("Most banned users", mostBanned, 10);
             ShowLeaders("Most active operators", activeOps, 10);
             ShowLeaders("Most common clan tags", mostCommonClans, 10);
+            ShowLeaders("Channels by time spent", channelsByTimeSpent, 10);
 
             #endregion
 
@@ -285,7 +345,7 @@ namespace SBLogAnalyzer
 
             // Write the master output file (this will be big)
             Console.WriteLine("Writing master file...");
-            writer.WriteFile("Master.txt", messages, m => m.ToString());
+            writer.WriteFile("Master.txt", messages.Where(m => m.Type != MessageType.Generic), m => m.ToString());
 
             // Write list of all clan tags found and when they were first seen
             writer.WriteFile("ClanTags.txt", clanMembers.GroupBy(m => m.ClanTag, comparer).Select(m => m.First()),
@@ -309,6 +369,7 @@ namespace SBLogAnalyzer
             WriteCounts("ActiveUsers.txt", activeUsers);
             WriteCounts("ActiveOperators.txt", activeOps);
             WriteCounts("MostPopularClans.txt", mostCommonClans);
+            WriteCounts("ChannelsByTime.txt", channelsByTimeSpent);
 
             // Output per-channel logs
             Console.WriteLine("Writing individual channel logs...");
@@ -337,6 +398,25 @@ namespace SBLogAnalyzer
                     var localMembers = clanMembers.Where(c => c.ClanTag.Equals(tag, sComp)).GroupBy(m => m.Username, comparer).Select(m => m.Last());
 
                     writer.WriteFile("Members.txt", localMembers, m => String.Format("{0} -> {1} in {2}", m.Username.Split('@')[0], m.Time, m.Channel));
+                }
+
+                // Write some misc statistics
+                if (channelStats.ContainsKey(channelName))
+                {
+                    ChannelStats stats = channelStats[channelName];
+                    string[] statOutput = new string[9]
+                    {
+                        "First joined: " + channelMessages.Where(m => m.Type == MessageType.ChannelJoin).First().Time.ToString(),
+                        "Last joined: " + stats.LastJoined.ToString(),
+                        "Number of times joined: " + stats.TimesJoined,
+                        "Total joins: " + stats.TotalUserJoins,
+                        "Total leaves: " + stats.TotalUserLeaves,
+                        "Total removed: " + stats.TotalRemoved,
+                        "Total chat messages: " + stats.TotalChatMessages,
+                        "Word count: " + stats.WordCount,
+                        "Time spent in channel: " + stats.TimeInChannel + " seconds"
+                    };
+                    writer.WriteFile("Statistics.txt", statOutput, s => s);
                 }
 
                 // Write a separate log file for each date (same as source format)
