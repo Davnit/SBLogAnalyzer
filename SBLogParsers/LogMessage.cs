@@ -134,10 +134,10 @@ namespace SBLogParsers
 
         public static bool QuickCheck(string line)
         {
-            if ((line.Length > 1) && (line[0] == WordSeparator)) return false;
-
             line = line.Trim();
             if (line.Length == 0) return false;
+
+            if (line.IndexOf(WordSeparator) < 4) return false;
 
             // This assumes the maximum length timestamp is "[01:07:14.785]" which is true as of SB 2.7 b487
             return (line.StartsWith(TimestampStart) && line.Substring(0, ((line.Length > MaxTimestampLength) ? MaxTimestampLength : line.Length)).Contains(TimestampEnd));
