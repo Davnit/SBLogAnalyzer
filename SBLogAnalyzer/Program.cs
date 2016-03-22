@@ -442,7 +442,7 @@ namespace SBLogAnalyzer
 
                     var tempMessages = channelMessages.Where(m => m.Time.Date.Equals(date) && includedMessages.Contains(m.Type));
                     if (tempMessages.Count() > 0)
-                        writer.WriteFile(fileName, tempMessages, m => m.Type + " >> " + m.ToString());
+                        writer.WriteFile(fileName, tempMessages, m => m.ToString());
                 }
             }
 
