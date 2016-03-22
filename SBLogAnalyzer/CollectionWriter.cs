@@ -28,6 +28,7 @@ namespace SBLogAnalyzer
             {
                 foreach (char c in Path.GetInvalidPathChars())
                     value = value.Replace(c.ToString(), String.Empty);
+                value = value.Replace("?", String.Empty);
 
                 directory = value;
                 if (!Directory.Exists(directory))
