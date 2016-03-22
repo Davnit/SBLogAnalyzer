@@ -18,12 +18,15 @@ namespace SBLogParsers
         {
             Username = String.Empty;
             EventType = EventType.None;
+
             Type = MessageType.JoinLeave;
         }
 
         private JoinLeaveMessage(LogMessage msg) : this()
         {
             msg.CopyTo(this);
+
+            Type = MessageType.JoinLeave;
         }
 
         #endregion
@@ -67,18 +70,20 @@ namespace SBLogParsers
         public static JoinLeaveMessage Parse(LogMessage message)
         {
             JoinLeaveMessage msg = new JoinLeaveMessage(message);
-            if (msg.Content.StartsWith(EventMessagePrefix))
-            {
-                string[] parts = msg.Content.Split(WordSeparator);
 
-                if (msg.Content.Contains(JoinMessageText))
+            string content = msg.Content;
+            if (content.StartsWith(EventMessagePrefix, sComp))
+            {
+                string[] parts = content.Split(WordSeparator);
+
+                if (msg.Content.ToLower().Contains(JoinMessageText))
                     msg.EventType = EventType.UserJoin;
-                else if (msg.Content.Contains(LeaveMessageText))
+                else if (msg.Content.ToLower().Contains(LeaveMessageText))
                     msg.EventType = EventType.UserLeft;
 
                 if (msg.EventType == EventType.UserJoin || msg.EventType == EventType.UserLeft)
                 {
-                    msg.Username = parts[1];
+                    msg.Username = msg.Content.Substring(parts[0].Length + 1, parts[1].Length); ;
                     msg.Content = msg.Content.Substring(EventMessagePrefix.Length + 1);
                 }
                 else
@@ -120,10 +125,10 @@ namespace SBLogParsers
 
         public static bool QuickCheck(LogMessage message)
         {
-            string content = message.Content.Trim();
+            string content = message.Content.Trim().ToLower();
             if (content.Length == 0) return false;
 
-            return (content.StartsWith(EventMessagePrefix) &&
+            return (content.StartsWith(EventMessagePrefix, sComp) &&
                 (content.Contains(JoinMessageText) || content.Contains(LeaveMessageText)));
         }
 

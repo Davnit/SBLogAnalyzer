@@ -14,7 +14,8 @@ namespace SBLogParsers
         JoinedChannel,
         UserTalk,
         UserEmote,
-        Whisper,
+        WhisperIn,
+        WhisperOut,
         Kick,
         Ban
     }

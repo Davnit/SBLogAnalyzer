@@ -14,6 +14,7 @@ namespace SBLogParsers
         public const int MaxTimestampLength = 14;
 
         public static readonly char[] TimestampCharacters = new char[7] { '[', ']', ':', '.', 'A', 'P', 'M' };
+        protected static StringComparison sComp = StringComparison.OrdinalIgnoreCase;
 
         #region Constructors
 
@@ -55,7 +56,7 @@ namespace SBLogParsers
             set;
         }
 
-        public MessageType Type
+        public virtual MessageType Type
         {
             get;
             protected set;
@@ -80,6 +81,7 @@ namespace SBLogParsers
             dest.Time = Time;
 
             dest.Channel = Channel;
+            dest.Type = Type;
         }
 
         public override string ToString()
@@ -100,12 +102,12 @@ namespace SBLogParsers
             msg.Timestamp = parts[0];
             msg.Content = line.Substring(parts[0].Length + 1);
 
-            if (!msg.Timestamp.StartsWith(TimestampStart))
+            if (!msg.Timestamp.StartsWith(TimestampStart, sComp))
                 throw InvalidFormatException;
 
-            if (!msg.Timestamp.EndsWith(TimestampEnd))
+            if (!msg.Timestamp.EndsWith(TimestampEnd, sComp))
             {
-                if (parts[1].EndsWith(TimestampEnd))
+                if (parts[1].EndsWith(TimestampEnd, sComp))
                 {
                     msg.Timestamp += parts[1];
                     msg.Content = msg.Content.Substring(parts[1].Length + 1);
@@ -147,7 +149,7 @@ namespace SBLogParsers
             if (line.IndexOf(WordSeparator) < 4) return false;
 
             // This assumes the maximum length timestamp is "[01:07:14.785]" which is true as of SB 2.7 b487
-            return (line.StartsWith(TimestampStart) && line.Substring(0, ((line.Length > MaxTimestampLength) ? MaxTimestampLength : line.Length)).Contains(TimestampEnd));
+            return (line.StartsWith(TimestampStart, sComp) && line.Substring(0, ((line.Length > MaxTimestampLength) ? MaxTimestampLength : line.Length)).Contains(TimestampEnd));
         }
 
         #endregion

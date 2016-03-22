@@ -23,6 +23,8 @@ namespace SBLogParsers
         private TaggedMessage(LogMessage msg) : this()
         {
             msg.CopyTo(this);
+
+            Type = MessageType.Tagged;
         }
 
         #endregion
@@ -68,7 +70,7 @@ namespace SBLogParsers
             TaggedMessage msg = new TaggedMessage(message);
             string[] parts = msg.Content.Split(WordSeparator);
 
-            if (parts[0].StartsWith(TagStart) && parts[0].EndsWith(TagEnd))
+            if (parts[0].StartsWith(TagStart, sComp) && parts[0].EndsWith(TagEnd, sComp))
             {
                 msg.Tag = parts[0].Substring(1, parts[0].Length - 2);
                 if (parts.Length > 1)
@@ -116,8 +118,8 @@ namespace SBLogParsers
             if (content.Length == 0) return false;
 
             // Tags shouldn't have spaces in them. I've never seen one that did.
-            return (content.StartsWith(TagStart) && content.Contains(TagEnd) && 
-                (content.IndexOf(TagEnd) < content.IndexOf(WordSeparator)));
+            return (content.StartsWith(TagStart, sComp) && content.ToLower().Contains(TagEnd) && 
+                (content.IndexOf(TagEnd, sComp) < content.IndexOf(WordSeparator)));
         }
 
         #endregion

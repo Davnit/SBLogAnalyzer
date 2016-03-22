@@ -22,6 +22,8 @@ namespace SBLogParsers
         private ChannelJoinMessage(LogMessage msg) : this()
         {
             msg.CopyTo(this);
+
+            Type = MessageType.ChannelJoin;
         }
 
         #endregion
@@ -49,8 +51,7 @@ namespace SBLogParsers
 
         public static bool IsClanChannel(string channelName)
         {
-            StringComparison comp = StringComparison.OrdinalIgnoreCase;
-            return channelName.StartsWith(ClanPrefix, comp) && !channelName.EndsWith("recruitment", comp);
+            return channelName.StartsWith(ClanPrefix, sComp) && !channelName.EndsWith("recruitment", sComp);
         }
 
         public static new ChannelJoinMessage Parse(string line)
@@ -61,7 +62,8 @@ namespace SBLogParsers
         public static ChannelJoinMessage Parse(LogMessage message)
         {
             ChannelJoinMessage msg = new ChannelJoinMessage(message);
-            if (msg.Content.StartsWith(JoinedChannel))
+
+            if (msg.Content.StartsWith(JoinedChannel, sComp))
             {
                 msg.Channel = msg.Content.Substring(JoinedChannel.Length);
                 msg.Channel = msg.Channel.Substring(0, msg.Channel.Length - ChannelPostfix.Length);
@@ -105,7 +107,7 @@ namespace SBLogParsers
             string content = message.Content.Trim();
             if (content.Length == 0) return false;
 
-            return (content.StartsWith(JoinedChannel) && content.EndsWith(ChannelPostfix));
+            return (content.StartsWith(JoinedChannel, sComp) && content.EndsWith(ChannelPostfix, sComp));
         }
 
         #endregion

@@ -29,6 +29,8 @@ namespace SBLogParsers
         private KickBanMessage(LogMessage msg) : this()
         {
             msg.CopyTo(this);
+
+            Type = MessageType.KickBan;
         }
 
         #endregion
@@ -112,12 +114,12 @@ namespace SBLogParsers
 
             // What type of action, kick or ban?
             string rest = msg.Content.Substring(msg.Username.Length);
-            if (rest.StartsWith(KickIndicator))
+            if (rest.StartsWith(KickIndicator, sComp))
             {
                 rest = rest.Substring(KickIndicator.Length);
                 msg.EventType = EventType.Kick;
             }
-            else if (rest.StartsWith(BanIndicator))
+            else if (rest.StartsWith(BanIndicator, sComp))
             {
                 rest = rest.Substring(BanIndicator.Length);
                 msg.EventType = EventType.Ban;
@@ -131,14 +133,14 @@ namespace SBLogParsers
             {
                 // why did they do it?
                 rest = rest.Substring(msg.KickedBy.Length);
-                if (rest.StartsWith(ReasonStart))
+                if (rest.StartsWith(ReasonStart, sComp))
                 {
                     msg.Reason = rest.Substring(ReasonStart.Length);
 
                     // Remove the trailing bits if they are there.
                     foreach (char c in ReasonEnd.Reverse())
                     {
-                        if (msg.Reason.EndsWith(c.ToString()))
+                        if (msg.Reason.EndsWith(c.ToString(), sComp))
                             msg.Reason = msg.Reason.Substring(0, msg.Reason.Length - 1);
                     }
                 }
@@ -188,7 +190,7 @@ namespace SBLogParsers
 
             // This will return true if a user says one of the key phrases as the first part of their message.
             //   Checking the UserTalkMessage check above should eliminate that.
-            return (content.StartsWith(KickIndicator) || content.StartsWith(BanIndicator));
+            return (content.StartsWith(KickIndicator, sComp) || content.StartsWith(BanIndicator, sComp));
         }
 
         #endregion

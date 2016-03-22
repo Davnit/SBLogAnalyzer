@@ -9,7 +9,7 @@ namespace SBLogParsers
     public class ClanMemberJoin : JoinLeaveMessage
     {
         public const string ClanTagPrefix = ", in clan ";
-        public const string ClanTagPostfix = ").";
+        public const string ClanTagPostfix = ")";
 
         #region Constructors
 
@@ -57,10 +57,12 @@ namespace SBLogParsers
         public static ClanMemberJoin Parse(JoinLeaveMessage message)
         {
             ClanMemberJoin msg = new ClanMemberJoin(message);
-            if (msg.Content.Contains(ClanTagPrefix))
+
+            string content = msg.Content.ToLower();     // only used for comparison
+            if (content.Contains(ClanTagPrefix))
             {
-                int start = msg.Content.IndexOf(ClanTagPrefix) + ClanTagPrefix.Length;
-                int end = msg.Content.IndexOf(ClanTagPostfix);
+                int start = content.IndexOf(ClanTagPrefix) + ClanTagPrefix.Length;
+                int end = content.IndexOf(ClanTagPostfix);
 
                 msg.ClanTag = msg.Content.Substring(start, end - start);
             }
@@ -117,8 +119,8 @@ namespace SBLogParsers
             string content = message.Content.Trim();
             if (content.Length == 0) return false;
 
-            int prefix = content.IndexOf(ClanTagPrefix);
-            return (prefix > 0 && content.IndexOf(ClanTagPostfix) > prefix) ;
+            int prefix = content.IndexOf(ClanTagPrefix, sComp);
+            return (prefix > 0 && content.IndexOf(ClanTagPostfix, sComp) > prefix) ;
         }
 
         #endregion
