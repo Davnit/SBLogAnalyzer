@@ -152,6 +152,14 @@ namespace SBLogAnalyzer
 
             #endregion
 
+            // Did we actually find anything useful?
+            if (fileCount == 0)
+            {
+                Console.WriteLine("No log files were found.");
+                Console.ReadKey();
+                return;
+            }
+
             // Put all of the resulting messages into a list ordered from earliest to latest.
             messages = messages.OrderBy(m => m.Time).ToList();
             
@@ -420,10 +428,21 @@ namespace SBLogAnalyzer
                 }
 
                 // Write a separate log file for each date (same as source format)
+                MessageType[] includedMessages = new MessageType[4]
+                {
+                    MessageType.ChannelJoin,
+                    MessageType.Chat,
+                    MessageType.JoinLeave,
+                    MessageType.KickBan
+                };
+
                 foreach (var date in channelMessages.Select(m => m.Time.Date).Distinct())
                 {
                     string fileName = date.ToString("yyyy-MM-dd") + ".txt";
-                    writer.WriteFile(fileName, channelMessages.Where(m => m.Time.Date.Equals(date)), m => m.ToString());
+
+                    var tempMessages = channelMessages.Where(m => m.Time.Date.Equals(date) && includedMessages.Contains(m.Type));
+                    if (tempMessages.Count() > 0)
+                        writer.WriteFile(fileName, tempMessages, m => m.Type + " >> " + m.ToString());
                 }
             }
 
